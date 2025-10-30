@@ -1,4 +1,4 @@
-reasoning_effort="${1:-low}"  # hoặc gán trực tiếp
+reasoning_effort="${1:-low}"  # low, medium, high
 
 case "$reasoning_effort" in
   low)
@@ -20,7 +20,7 @@ case "$reasoning_effort" in
 esac
 
 python3 scripts/openai_responses_infer.py \
-  --model_name_or_path /mnt/dataset1/pretrained_fm/gpt-oss-20b \
+  --model_name_or_path openai/gpt-oss-20b \
   --template gpt \
   --dataset gsm8k_train \
   --dataset_dir "data" \

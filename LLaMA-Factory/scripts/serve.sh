@@ -1,4 +1,4 @@
-reasoning_effort="${1:-low}"  # hoặc gán trực tiếp
+reasoning_effort="${1:-low}"  # low, medium, high
 
 case "$reasoning_effort" in
   low)
@@ -19,7 +19,7 @@ case "$reasoning_effort" in
     ;;
 esac
 
-CUDA_VISIBLE_DEVICES=0 vllm serve /mnt/dataset1/pretrained_fm/gpt-oss-20b \
+CUDA_VISIBLE_DEVICES=0 vllm serve openai/gpt-oss-20b \
   --host 0.0.0.0 --port 8000 \
   --gpu-memory-utilization 0.9 \
   --max-num-batched-tokens 16384 \
