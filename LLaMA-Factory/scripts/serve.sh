@@ -10,7 +10,7 @@ case "$reasoning_effort" in
     max_model_len=6144
     ;;
   high)
-    max_num_seqs=164
+    max_num_seqs=192
     max_model_len=10144
     ;;
   *)
