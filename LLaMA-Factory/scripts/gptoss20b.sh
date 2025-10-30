@@ -7,12 +7,12 @@ case "$reasoning_effort" in
     save_name="gptoss20b_gsm8k_train_results_low.jsonl"
     ;;
   medium)
-    concurrency=128
+    concurrency=192
     max_new_tokens=4096
     save_name="gptoss20b_gsm8k_train_results_medium.jsonl"
     ;;
   high)
-    concurrency=64
+    concurrency=192
     max_new_tokens=8096
     save_name="gptoss20b_gsm8k_train_results_high.jsonl"
     ;;

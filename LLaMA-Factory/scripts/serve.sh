@@ -1,4 +1,4 @@
-reasoning_effort="${1:-low}"  # low, medium, high
+reasoning_effort="${1:-high}"  # low, medium, high
 
 case "$reasoning_effort" in
   low)
@@ -10,7 +10,7 @@ case "$reasoning_effort" in
     max_model_len=6144
     ;;
   high)
-    max_num_seqs=192
+    max_num_seqs=164
     max_model_len=10144
     ;;
   *)
@@ -21,7 +21,7 @@ esac
 
 CUDA_VISIBLE_DEVICES=0 vllm serve openai/gpt-oss-20b \
   --host 0.0.0.0 --port 8000 \
-  --gpu-memory-utilization 0.95 \
-  --max-num-batched-tokens 20244 \
+  --gpu-memory-utilization 0.9 \
+  --max-num-batched-tokens 20288 \
   --max-model-len $max_model_len \
   --max-num-seqs $max_num_seqs \
