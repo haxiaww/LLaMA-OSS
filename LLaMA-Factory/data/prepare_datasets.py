@@ -56,7 +56,8 @@ def build_prompt_gsm8k(question: str) -> str:
         "",
         f"Problem: {question.strip()}",
         "",
-        "Explain your reasoning, then output the final answer."
+        "Explain your reasoning, then output the final answer after '####' signal.",
+        "For example: #### <final answer>"
     ]
     return "\n".join(lines)
 
@@ -123,7 +124,8 @@ def build_prompt_logiqa(context: str, query: str, options: List[str]) -> str:
         f"C. {opts[2]}",
         f"D. {opts[3]}",
         "",
-        "Explain your reasoning, then output the final answer as a single letter (A/B/C/D)."
+        "Explain your reasoning, then output the final answer after '####' as a single letter (A/B/C/D).",
+        "For example: #### <final answer>"
     ]
     return "\n".join(lines)
 
@@ -174,7 +176,8 @@ def build_prompt_compmath(problem: str) -> str:
         "",
         f"Problem: {problem.strip()}",
         "",
-        "Explain your reasoning, then provide the final answer."
+        "Explain your reasoning, then output the final answer after ####.",
+        "For example: #### \\boxed{\\frac{1}{2}}"
     ]
     return "\n".join(lines)
 
