@@ -1,29 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-prepare_datasets.py
--------------------
-Download and preprocess the following datasets into Alpaca-style JSONL for inference:
-- GSM8K:          openai/gsm8k            (splits: train, test)
-- LogiQA:         lucasmccabe/logiqa       (splits: train, validation, test)
-- CompetitionMath: qwedsacf/competition_math (splits: train; may vary)
-
-Output folder: data/processed/
-Each JSONL contains {"prompt": <str>, "response": <optional str>, "meta": <optional dict>} per line.
-
-Requirements:
-    pip install datasets
-
-Usage examples:
-    python prepare_datasets.py --all
-    python prepare_datasets.py --gsm8k
-    python prepare_datasets.py --logiqa
-    python prepare_datasets.py --comp-math
-    python prepare_datasets.py --outdir data/processed
-
-Notes:
-- "response" is kept to store ground truth labels/solutions for later evaluation.
-- For inference, LLaMA-Factory will primarily use "prompt".
+prepare_datasets.py - Optimized for GPT-OSS with clean final answers
 """
 
 import os
@@ -48,16 +26,17 @@ def write_jsonl(path: str, rows: List[Dict[str, Any]]):
 
 
 # ---------------------
-# GSM8K
+# GSM8K - Math Problems
 # ---------------------
 def build_prompt_gsm8k(question: str) -> str:
+    """
+    Clear instruction: reasoning goes internal, final answer is clean boxed format.
+    """
     lines = [
-        "You are a careful math & logic assistant. Solve the following problem step by step, then provide the final numeric answer.",
+        question.strip(),
         "",
-        f"Problem: {question.strip()}",
-        "",
-        "Explain your reasoning, then output the final answer after '####' signal.",
-        "For example: #### <final answer>"
+        "Please reason step by step, and put your final answer within \\boxed{}.",
+        "Do NOT include explanations or reasoning in the final answer - only the numeric value in \\boxed{}."
     ]
     return "\n".join(lines)
 
@@ -74,7 +53,7 @@ def process_gsm8k(outdir: str):
             a = ex.get("answer", "").strip()
             rows.append({
                 "prompt": build_prompt_gsm8k(q),
-                "response": a,                     # keep full solution text (often includes '#### <final>')
+                "response": a,
                 "meta": {"dataset": "gsm8k", "split": split}
             })
         out_path = os.path.join(outdir, f"gsm8k_{split}_alpaca.jsonl")
@@ -83,21 +62,17 @@ def process_gsm8k(outdir: str):
 
 
 # ---------------------
-# LogiQA
+# LogiQA - Logic Reasoning
 # ---------------------
 LETTER = ["A", "B", "C", "D"]
 
 def normalize_correct_option(co: Any) -> str:
-    """
-    Map correct_option to a letter A/B/C/D. Some variants store int index (0..3) or the letter string.
-    """
     if isinstance(co, int):
         if 0 <= co < len(LETTER):
             return LETTER[co]
         return str(co)
     if isinstance(co, str):
         s = co.strip().upper()
-        # Could be "A"/"B"/"C"/"D" or possibly "0"/"1"/...
         if s in LETTER:
             return s
         try:
@@ -109,34 +84,31 @@ def normalize_correct_option(co: Any) -> str:
 
 
 def build_prompt_logiqa(context: str, query: str, options: List[str]) -> str:
-    # Some datasets use 'answers' or 'options'; ensure we handle both gracefully.
+    """
+    Clear format: reasoning internal, final output is just the letter in boxed format.
+    """
     opts = options or []
     while len(opts) < 4:
         opts.append("")
+    
     lines = [
-        "You are a careful logic QA assistant. Read the context and question, then explain your reasoning and pick the best option (A/B/C/D).",
-        "",
         f"Context: {context.strip()}",
+        "",
         f"Question: {query.strip()}",
+        "",
         "Options:",
         f"A. {opts[0]}",
         f"B. {opts[1]}",
         f"C. {opts[2]}",
         f"D. {opts[3]}",
         "",
-        "Explain your reasoning, then output the final answer after '####' as a single letter (A/B/C/D).",
-        "For example: #### <final answer>"
+        "Please reason step by step, and put your final answer as a single letter (A/B/C/D) within \\boxed{}.",
+        "Do NOT include explanations or reasoning in the final answer - only the letter in \\boxed{}."
     ]
     return "\n".join(lines)
 
 
 def load_logiqa_dataset():
-    """
-    Handle Datasets>=3 where dataset scripts are not executed by default.
-    Strategy:
-      1) Try parquet-converted revision (no script execution needed)
-      2) Fallback: trust_remote_code=True to allow running dataset script
-    """
     try:
         print("[LogiQA] Trying parquet-converted revision (refs/convert/parquet) ...")
         return load_dataset("lucasmccabe/logiqa", revision="refs/convert/parquet")
@@ -168,16 +140,17 @@ def process_logiqa(outdir: str):
 
 
 # ---------------------
-# Competition Math (MATH-like)
+# Competition Math (AIME-style)
 # ---------------------
 def build_prompt_compmath(problem: str) -> str:
+    """
+    AIME style: reasoning internal, final answer is clean boxed expression.
+    """
     lines = [
-        "You are a careful math assistant. Solve the following competition math problem step by step and provide a final boxed answer.",
+        problem.strip(),
         "",
-        f"Problem: {problem.strip()}",
-        "",
-        "Explain your reasoning, then output the final answer after ####.",
-        "For example: #### \\boxed{\\frac{1}{2}}"
+        "Please reason step by step, and put your final answer within \\boxed{}.",
+        "Do NOT include explanations or reasoning in the final answer - only the mathematical expression or value in \\boxed{}."
     ]
     return "\n".join(lines)
 
@@ -185,7 +158,6 @@ def build_prompt_compmath(problem: str) -> str:
 def process_competition_math(outdir: str):
     print("[CompetitionMath] Loading qwedsacf/competition_math ...")
     ds = load_dataset("qwedsacf/competition_math")
-    # Attempt common splits; if only "train" exists, process that.
     for split in ("train", "validation", "test"):
         if split not in ds:
             continue
@@ -197,7 +169,6 @@ def process_competition_math(outdir: str):
                 "dataset": "competition_math",
                 "split": split,
             }
-            # Keep some metadata fields if present
             for key in ("level", "type", "source"):
                 if key in ex:
                     meta[key] = ex[key]
@@ -206,16 +177,16 @@ def process_competition_math(outdir: str):
                 "response": sol,
                 "meta": meta
             })
-        # If there were no rows because split missing, skip writing
         if rows:
             out_path = os.path.join(outdir, f"competition_math_{split}_alpaca.jsonl")
             write_jsonl(out_path, rows)
             print(f"[CompetitionMath] Wrote {len(rows)} rows to {out_path}")
-    # If dataset exposes only a single split (e.g., "train"), ensure it's handled by the loop above.
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Prepare datasets for GPT-OSS inference (clean final answers)"
+    )
     parser.add_argument("--outdir", type=str, default="data", help="Output folder for JSONL files.")
     parser.add_argument("--gsm8k", action="store_true", help="Process GSM8K (openai/gsm8k).")
     parser.add_argument("--logiqa", action="store_true", help="Process LogiQA (lucasmccabe/logiqa).")
@@ -224,6 +195,19 @@ def main():
     args = parser.parse_args()
 
     ensure_dir(args.outdir)
+    
+    print("\n" + "="*70)
+    print("GPT-OSS Dataset Preparation")
+    print("="*70)
+    print("Prompt strategy:")
+    print("  ✓ 'Please reason step by step' - triggers internal CoT reasoning")
+    print("  ✓ 'put your final answer within \\boxed{}' - clear output marker")
+    print("  ✓ 'Do NOT include explanations in final answer' - clean output")
+    print("")
+    print("Expected behavior:")
+    print("  • Reasoning → goes to 'reasoning_content' field (harmony format)")
+    print("  • Final answer → goes to 'content' field as \\boxed{value} only")
+    print("="*70 + "\n")
 
     if args.all or args.gsm8k:
         process_gsm8k(args.outdir)
@@ -234,7 +218,21 @@ def main():
     if args.all or args.comp_math:
         process_competition_math(args.outdir)
 
-    print("Done.")
+    print("\n" + "="*70)
+    print("Done! Example outputs:")
+    print("")
+    print("GSM8K:")
+    print("  reasoning_content: 'Let me solve this step by step...'")
+    print("  content: '\\boxed{42}'")
+    print("")
+    print("LogiQA:")
+    print("  reasoning_content: 'Analyzing each option...'")
+    print("  content: '\\boxed{D}'")
+    print("")
+    print("CompMath:")
+    print("  reasoning_content: 'Using integration by parts...'")
+    print("  content: '\\boxed{\\frac{\\pi}{4}}'")
+    print("="*70 + "\n")
     
 
 if __name__ == "__main__":

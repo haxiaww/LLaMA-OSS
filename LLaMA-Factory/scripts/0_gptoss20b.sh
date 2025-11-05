@@ -78,7 +78,7 @@ python3 scripts/0_openai_responses_infer.py \
   --skip_special_tokens False \
   --default_system "" \
   --enable_thinking True \
-  --batch_size 2048 \
+  --batch_size 512 \
   --generations_per_sample 5 \
   --dataset $dataset_name \
   --openai_base_url $openai_base_url \

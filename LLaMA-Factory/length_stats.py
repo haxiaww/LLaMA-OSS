@@ -17,9 +17,9 @@ except ImportError:  # pragma: no cover - optional dependency
 
 # Default input files. Adjust as needed.
 DEFAULT_FILENAMES = [
-    "gptoss20b_logiqa_train_results_high.jsonl",
-    "gptoss20b_logiqa_train_results_medium.jsonl",
-    "gptoss20b_logiqa_train_results_low.jsonl",
+    "gsm8k_train_high_raw.jsonl",
+    "gsm8k_train_medium_raw.jsonl",
+    "gsm8k_train_low_raw.jsonl",
 ]
 
 HIST_OUTPUT_DIR = Path(__file__).parent / "length_histograms"
@@ -28,12 +28,14 @@ def summarize(lengths):
     if not lengths:
         return None
 
+    std = statistics.pstdev(lengths)
     return {
         "count": len(lengths),
         "min": min(lengths),
         "max": max(lengths),
         "mean": statistics.fmean(lengths),
         "median": statistics.median(lengths),
+        "std": std,
     }
 
 
@@ -117,6 +119,8 @@ def compute_stats(path: Path, fields: Iterable[str]) -> Dict[str, Dict[str, obje
                 "Max Line": max_line,
                 "Mean": round(summary["mean"], 2),
                 "Median": summary["median"],
+                "Std": round(summary["std"], 2),
+                "Mean ± Std": f"{round(summary['mean'], 2)} ± {round(summary['std'], 2)}",
             },
             "lengths": data["lengths"],
         }
