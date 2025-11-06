@@ -84,7 +84,7 @@ def compute_stats(path: Path, fields: Iterable[str]) -> Dict[str, Dict[str, obje
             for field in fields:
                 if field not in record or record[field] is None:
                     continue
-                # Read numeric value directly from field (expects 'output_tokens')
+                # Read numeric value directly from field (expects 'reasoning_tokens')
                 try:
                     length = int(record[field])
                 except Exception:
@@ -152,8 +152,8 @@ def save_predict_histograms(entries: List[Tuple[Path, List[int]]]) -> Optional[P
         ax.set_title(path.name)
         ax.set_xlabel("Length (tokens)")
         ax.set_ylabel("Frequency")
-        ax.set_ylim(0, 2500)
-        ax.set_xlim(0, 450)
+        ax.set_ylim(0, 3000)
+        ax.set_xlim(0, 8096)
 
     # Hide any unused axes when fewer plots than allocated
     for ax in axes_flat[len(filtered_entries):]:
@@ -268,8 +268,8 @@ def main():
             print(f"Skipping missing file: {path}")
             continue
 
-        # Only care about the numeric field 'output_tokens' in inputs
-        results = compute_stats(path, fields=["output_tokens"])
+        # Only care about the numeric field 'reasoning_tokens' in inputs
+        results = compute_stats(path, fields=["reasoning_tokens"])
         if not results:
             print(f"No data found for the requested fields in {path}")
             continue
@@ -279,7 +279,7 @@ def main():
     combined_rows = []
     predict_entries: List[Tuple[Path, List[int]]] = []
     for path, results in processed_results:
-        field = "output_tokens"
+        field = "reasoning_tokens"
         field_data = results.get(field)
         if not field_data:
             continue
@@ -288,7 +288,7 @@ def main():
         combined_rows.append(row)
         predict_entries.append((path, field_data["lengths"]))
 
-    print("\nCombined statistics (by output_tokens):")
+    print("\nCombined statistics (by reasoning_tokens):")
     render_table(combined_rows)
 
     hist_path = save_predict_histograms(predict_entries)

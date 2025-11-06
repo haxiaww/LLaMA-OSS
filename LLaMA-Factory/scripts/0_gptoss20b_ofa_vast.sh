@@ -1,5 +1,7 @@
+dataset="$1"
+
 python3 scripts/0_openai_responses_infer.py \
-  --model_name_or_path /mnt/dataset1/pretrained_fm/gpt-oss-20b \
+  --model_name_or_path openai/gpt-oss-20b \
   --template gpt \
   --dataset_dir "data" \
   --cutoff_len 1024 \
@@ -12,14 +14,14 @@ python3 scripts/0_openai_responses_infer.py \
   --generations_per_sample 5 \
   --max_new_tokens 8096 \
   --openai_base_url http://localhost:8000/v1 \
-  --dataset gsm8k_train \
-  --save_name gsm8k_train_low_raw.jsonl \
+  --dataset logiqa_train \
+  --save_name logiqa_train_low_raw.jsonl \
   --reasoning_effort low \
-  --concurrency 64 \
+  --concurrency 320 \
 
 
 python3 scripts/0_openai_responses_infer.py \
-  --model_name_or_path /mnt/dataset1/pretrained_fm/gpt-oss-20b \
+  --model_name_or_path openai/gpt-oss-20b \
   --template gpt \
   --dataset_dir "data" \
   --cutoff_len 1024 \
@@ -32,14 +34,14 @@ python3 scripts/0_openai_responses_infer.py \
   --generations_per_sample 5 \
   --max_new_tokens 8096 \
   --openai_base_url http://localhost:8000/v1 \
-  --dataset gsm8k_train \
-  --save_name gsm8k_train_medium_raw.jsonl \
+  --dataset logiqa_train \
+  --save_name logiqa_train_medium_raw.jsonl \
   --reasoning_effort medium \
-  --concurrency 64 \
+  --concurrency 320 \
 
 
 python3 scripts/0_openai_responses_infer.py \
-  --model_name_or_path /mnt/dataset1/pretrained_fm/gpt-oss-20b \
+  --model_name_or_path openai/gpt-oss-20b \
   --template gpt \
   --dataset_dir "data" \
   --cutoff_len 1024 \
@@ -52,7 +54,7 @@ python3 scripts/0_openai_responses_infer.py \
   --generations_per_sample 5 \
   --max_new_tokens 8096 \
   --openai_base_url http://localhost:8000/v1 \
-  --dataset gsm8k_train \
-  --save_name gsm8k_train_high_raw.jsonl \
+  --dataset logiqa_train \
+  --save_name logiqa_train_high_raw.jsonl \
   --reasoning_effort high \
-  --concurrency 64 \
+  --concurrency 320 \

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import asyncio, gc, json, math, os
 from typing import Dict, Optional, List, Tuple
+import re
 import fire
 from tqdm import tqdm
 from transformers import Seq2SeqTrainingArguments
@@ -15,14 +16,16 @@ from openai import AsyncOpenAI, BadRequestError
 def _is_prediction_complete(pred: Optional[str]) -> bool:
     if not isinstance(pred, str):
         return False
+    
     stripped = pred.strip()
     if not stripped:
         return False
-    marker = "####"
-    if marker not in stripped:
-        return False
-    suffix = stripped[stripped.rfind(marker) + len(marker):].strip()
-    return bool(suffix)
+    
+    # After JSON parsing: "\\boxed{10}" becomes '\boxed{10}' (single backslash)
+    pattern = r'\\boxed\{([^}]+)\}'
+    matches = re.findall(pattern, stripped)
+    # Consider complete if has at least one boxed expression with content
+    return len(matches) > 0 and any(m.strip() for m in matches)
 
 
 async def _one_call(
@@ -293,7 +296,10 @@ def infer_via_openai_responses_fast(
     print(f"[Progress] Already completed: {len(train_dataset) * generations_per_sample - total_pending}")
     
     async def _process_batches(f_handle):
-        client = AsyncOpenAI(base_url=openai_base_url, api_key=openai_api_key or "not-needed")
+        client = AsyncOpenAI(
+            base_url=openai_base_url, 
+            api_key=openai_api_key or "not-needed",
+        )
         
         # Create main progress bars
         batch_pbar = tqdm(
