@@ -15,6 +15,13 @@ except ImportError as exc:  # pragma: no cover - tabulate required at runtime
         "Missing dependency 'tabulate'. Install it with `pip install tabulate`."
     ) from exc
 
+try:
+    from tqdm import tqdm
+except ImportError as exc:  # pragma: no cover - tqdm required at runtime
+    raise SystemExit(
+        "Missing dependency 'tqdm'. Install it with `pip install tqdm`."
+    ) from exc
+
 DATASET_CHOICES = ("gsm8k", "logiqa", "compmath")
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -39,6 +46,8 @@ class Record:
     sample_id: Optional[str] = None
     tokens: List[str] = field(default_factory=list)
     token_count: int = 0
+    data: Optional[Dict[str, Any]] = None
+    position: int = -1
 
 
 def parse_args() -> argparse.Namespace:
@@ -148,16 +157,26 @@ def longest_common_span_ratio(tokens_a: List[str], tokens_b: List[str]) -> float
 
 
 def deduplicate_file(
-    input_path: Path, output_path: Path, options: DedupOptions
-) -> Tuple[int, int, int]:
+    input_path: Path,
+    output_path: Path,
+    rejected_path: Path,
+    options: DedupOptions,
+    show_progress: bool = True,
+) -> Tuple[int, int, int, int]:
     seen: Dict[str, List[Record]] = {}
     records: List[Record] = []
     total = 0
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    rejected_records: List[Dict[str, Any]] = []
 
     with input_path.open("r", encoding="utf-8") as src:
-        for raw_line in src:
+        iterator = (
+            tqdm(src, desc=f"{input_path.name}", unit="lines", leave=False)
+            if show_progress
+            else src
+        )
+        for raw_line in iterator:
             line = raw_line.strip()
             if not line:
                 continue
@@ -168,13 +187,17 @@ def deduplicate_file(
             try:
                 sample = json.loads(line)
             except json.JSONDecodeError:
-                records.append(Record(line=newline, active=True))
+                record = Record(line=newline, active=True)
+                records.append(record)
+                record.position = len(records) - 1
                 continue
 
             consider, sample_id, reasoning = should_consider(sample)
             serialized = json.dumps(sample, ensure_ascii=False) + "\n"
             if not consider:
-                records.append(Record(line=serialized, active=True))
+                record = Record(line=serialized, active=True, data=sample)
+                records.append(record)
+                record.position = len(records) - 1
                 continue
 
             normalized = normalize_reasoning_text(
@@ -190,8 +213,10 @@ def deduplicate_file(
                 sample_id=sample_id,
                 tokens=tokens,
                 token_count=len(tokens),
+                data=sample,
             )
             records.append(record)
+            record.position = len(records) - 1
 
             seen_entries = seen.get(sample_id, [])
             active_entries = [entry for entry in seen_entries if entry.active]
@@ -202,10 +227,30 @@ def deduplicate_file(
                 if span_ratio >= options.overlap_threshold:
                     if record.token_count <= existing.token_count:
                         record.active = False
+                        rejected_records.append(
+                            {
+                                "sample_id": sample_id,
+                                "kept_index": existing.position,
+                                "dropped_index": record.position,
+                                "span_ratio": span_ratio,
+                                "kept": existing.data,
+                                "dropped": record.data,
+                            }
+                        )
                         remove_candidate = True
                         break
                     existing.active = False
                     active_entries.remove(existing)
+                    rejected_records.append(
+                        {
+                            "sample_id": sample_id,
+                            "kept_index": record.position,
+                            "dropped_index": existing.position,
+                            "span_ratio": span_ratio,
+                            "kept": record.data,
+                            "dropped": existing.data,
+                        }
+                    )
 
             if remove_candidate:
                 seen[sample_id] = active_entries
@@ -213,6 +258,9 @@ def deduplicate_file(
 
             active_entries.append(record)
             seen[sample_id] = active_entries
+
+        if show_progress and hasattr(iterator, "close"):
+            iterator.close()
 
     kept = sum(1 for record in records if record.active)
     dropped = total - kept
@@ -222,7 +270,25 @@ def deduplicate_file(
             if record.active:
                 dst.write(record.line)
 
-    return total, kept, dropped
+    if rejected_records:
+        rejected_path.parent.mkdir(parents=True, exist_ok=True)
+        with rejected_path.open("w", encoding="utf-8") as rej_dst:
+            for item in sorted(rejected_records, key=lambda entry: entry["dropped_index"]):
+                payload: Dict[str, Any] = {
+                    "sample_id": item["sample_id"],
+                    "kept_index": item["kept_index"],
+                    "dropped_index": item["dropped_index"],
+                    "span_ratio": item["span_ratio"],
+                }
+                if item.get("kept") is not None:
+                    payload["kept"] = item["kept"]
+                if item.get("dropped") is not None:
+                    payload["dropped"] = item["dropped"]
+                rej_dst.write(json.dumps(payload, ensure_ascii=False) + "\n")
+    elif rejected_path.exists():
+        rejected_path.unlink()
+
+    return total, kept, dropped, len(rejected_records)
 
 
 def process_dataset(
@@ -238,55 +304,80 @@ def process_dataset(
 
     output_dir = output_root / dataset
     output_dir.mkdir(parents=True, exist_ok=True)
+    rejected_dir = output_root / "rejected" / dataset
 
     input_files = sorted(input_dir.glob("*.jsonl"))
     if not input_files:
         print(f"[INFO] No JSONL files found in {input_dir}; nothing to do.")
         return
 
-    per_file_rows = []
-    per_file_paths = []
-    processed_files = 0
-    total_samples = 0
-    total_kept = 0
-
-    for input_path in input_files:
+    results: List[Tuple[int, str, str, str, int, int, int, int]] = []
+    for index, input_path in enumerate(input_files):
         output_path = derive_output_path(input_path, output_dir, suffix)
-        total, kept, dropped = deduplicate_file(input_path, output_path, options)
-        keep_rate = (kept / total * 100) if total else 0.0
-        per_file_rows.append(
-            [
+        rejected_path = rejected_dir / f"{input_path.stem}{suffix}_rejected.jsonl"
+        total, kept, dropped, rejected = deduplicate_file(
+            input_path, output_path, rejected_path, options, show_progress=True
+        )
+        results.append(
+            (
+                index,
                 input_path.name,
+                str(output_path.resolve()),
+                str(rejected_path.resolve()),
                 total,
                 kept,
                 dropped,
-                f"{keep_rate:.1f}%" if total else "n/a",
-            ]
+                rejected,
+            )
         )
-        per_file_paths.append((input_path.name, str(output_path.resolve())))
 
-        processed_files += 1
-        total_samples += total
-        total_kept += kept
-
-    if processed_files == 0:
+    if not results:
         print(f"[{dataset}] No files processed. Nothing to do.")
         return
 
+    results.sort(key=lambda item: item[0])
+
+    per_file_rows = []
+    per_file_paths = []
+    total_samples = 0
+    total_kept = 0
+    total_rejected = 0
+
+    for _, filename, output_path, rejected_path, total, kept, dropped, rejected in results:
+        keep_rate = (kept / total * 100) if total else 0.0
+        per_file_rows.append(
+            [
+                filename,
+                total,
+                kept,
+                dropped,
+                rejected,
+                f"{keep_rate:.1f}%" if total else "n/a",
+            ]
+        )
+        per_file_paths.append((filename, output_path, rejected_path, rejected))
+        total_samples += total
+        total_kept += kept
+        total_rejected += rejected
+
+    processed_files = len(results)
     total_dropped = total_samples - total_kept
-    headers = ["File", "Total", "Kept", "Dropped", "Keep Rate"]
+    headers = ["File", "Total", "Kept", "Dropped", "Rejected", "Keep Rate"]
     print(f"[{dataset}] Per-file stats:")
     print(tabulate(per_file_rows, headers=headers, tablefmt="grid"))
 
     print(f"[{dataset}] Output paths:")
-    for filename, output_path in per_file_paths:
+    for filename, output_path, rejected_path, rejected in per_file_paths:
         print(f"  {filename}: filtered -> {output_path}")
+        if rejected:
+            print(f"           rejected -> {rejected_path}")
 
     keep_rate = (total_kept / total_samples * 100) if total_samples else 0.0
     print(
         f"[{dataset}] Summary: processed {processed_files} files, "
         f"kept {total_kept} samples, dropped {total_dropped} samples, "
-        f"total {total_samples} samples, keep_rate={keep_rate:.1f}%."
+        f"total {total_samples} samples, overlap_rejected={total_rejected}, "
+        f"keep_rate={keep_rate:.1f}%.",
     )
 
 
@@ -301,7 +392,11 @@ def main() -> None:
         overlap_threshold=args.overlap_threshold,
     )
     process_dataset(
-        args.dataset, args.input_root, args.output_root, args.suffix, options
+        args.dataset,
+        args.input_root,
+        args.output_root,
+        args.suffix,
+        options,
     )
 
 

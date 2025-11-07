@@ -1,0 +1,259 @@
+Script started on 2025-11-07 14:03:44+07:00 [TERM="screen.xterm-256color" TTY="/dev/pts/38" COLUMNS="215" LINES="29"]
+bash: cd: /home/VLAI/khoina/: No such file or directory
+[?2004h[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ sc[K[K[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git pull 
+[?2004lUpdating 2a822178..a711bce6
+Fast-forward
+ .env.local                                                                 |   3 [32m++[m
+ README.md                                                                  |   8 [32m+++[m[31m-[m
+ README_zh.md                                                               |   8 [32m+++[m[31m-[m
+ data/v1_dpo_demo.jsonl                                                     |  10 [32m+++++[m
+ data/v1_dpo_demo.yaml                                                      |   4 [32m++[m
+ docker/docker-cuda/Dockerfile.megatron                                     |  77 [32m++++++++++++++++++++++++++++++++++++[m
+ docker/docker-npu/Dockerfile                                               |   8 [32m+++[m[31m-[m
+ examples/inference/deepseek2_lora_sft_kt.yaml                              |  10 [32m+++++[m
+ examples/inference/deepseek3_kt.yaml                                       |   9 [32m+++++[m
+ examples/inference/deepseek3_lora_sft_kt.yaml                              |  10 [32m+++++[m
+ examples/inference/llama3.yaml                                             |   2 [32m+[m[31m-[m
+ examples/inference/llama3_full_sft.yaml                                    |   2 [32m+[m[31m-[m
+ examples/inference/llama3_lora_sft.yaml                                    |   2 [32m+[m[31m-[m
+ examples/inference/qwen2_5vl.yaml                                          |   2 [32m+[m[31m-[m
+ examples/kt_optimize_rules/DeepSeek-V2-Chat-sft-amx.yaml                   |  69 [32m+++++++++++++++++++++++++++++++++[m
+ examples/kt_optimize_rules/DeepSeek-V2-Chat.yaml                           |  68 [32m++++++++++++++++++++++++++++++++[m
+ examples/kt_optimize_rules/DeepSeek-V2-Lite-Chat-sft-amx-multi-gpu.yaml    | 139 [32m+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[m
+ examples/kt_optimize_rules/DeepSeek-V2-Lite-Chat-sft-amx.yaml              |  69 [32m+++++++++++++++++++++++++++++++++[m
+ examples/kt_optimize_rules/DeepSeek-V2-Lite-Chat-sft.yaml                  |  68 [32m++++++++++++++++++++++++++++++++[m
+ examples/kt_optimize_rules/DeepSeek-V2-Lite-Chat.yaml                      |  68 [32m++++++++++++++++++++++++++++++++[m
+ examples/kt_optimize_rules/DeepSeek-V3-Chat-amx.yaml                       |  77 [32m++++++++++++++++++++++++++++++++++++[m
+ examples/kt_optimize_rules/DeepSeek-V3-Chat-sft-amx-multi-gpu-4.yaml       | 392 [32m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[m
+ examples/kt_optimize_rules/DeepSeek-V3-Chat-sft-amx-multi-gpu.yaml         | 156 [32m+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[m
+ examples/kt_optimize_rules/DeepSeek-V3-Chat-sft-amx.yaml                   |  77 [32m++++++++++++++++++++++++++++++++++++[m
+ examples/megatron/qwen2_vl_full.yaml                                       |  29 [32m++++++++++++++[m
+ examples/megatron/qwen3_moe_full.yaml                                      |  35 [32m+++++++++++++++++[m
+ examples/train_lora/deepseek2_lora_sft_kt.yaml                             |  52 [32m+++++++++++++++++++++++++[m
+ examples/train_lora/deepseek3_lora_sft_kt.yaml                             |  52 [32m+++++++++++++++++++++++++[m
+ scripts/megatron_merge.py                                                  | 125 [32m+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[m
+ scripts/vllm_infer.py                                                      |  36 [32m++++++++++++++++[m[31m-[m
+ setup.py                                                                   |   2 [32m+[m[31m-[m
+ src/llamafactory/chat/chat_model.py                                        |  10 [32m+++++[m
+ src/llamafactory/chat/kt_engine.py                                         | 284 [32m+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[m
+ src/llamafactory/data/loader.py                                            |   1 [31m-[m
+ src/llamafactory/data/mm_plugin.py                                         |  94 [32m+++++++++++++++++++++++++++[m[31m-----------------[m
+ src/llamafactory/data/parser.py                                            |   2 [32m+[m[31m-[m
+ src/llamafactory/data/template.py                                          |   9 [32m++++[m[31m-[m
+ src/llamafactory/extras/constants.py                                       |  30 [32m+++++++++++++++[m
+ src/llamafactory/extras/misc.py                                            |   4 [32m++[m
+ src/llamafactory/extras/packages.py                                        |  13 [32m+++++++[m
+ src/llamafactory/hparams/finetuning_args.py                                |  11 [32m+++++[m[31m-[m
+ src/llamafactory/hparams/model_args.py                                     |  55 [32m+++++++++++++++++++++++++[m[31m-[m
+ src/llamafactory/hparams/parser.py                                         |  51 [32m++++++++++++++++++++++[m[31m--[m
+ src/llamafactory/hparams/training_args.py                                  |  20 [32m++++++++[m[31m--[m
+ src/llamafactory/launcher.py                                               |   9 [32m++++[m[31m-[m
+ src/llamafactory/model/adapter.py                                          |  42 [32m+++++++++++++++++++[m[31m-[m
+ src/llamafactory/model/loader.py                                           |   8 [32m+++[m[31m-[m
+ src/llamafactory/model/model_utils/attention.py                            |   9 [32m+++[m[31m--[m
+ src/llamafactory/model/model_utils/ktransformers.py                        | 152 [32m+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[m
+ src/llamafactory/model/model_utils/sdpa_npu_redirect.py                    | 131 [31m--------------------------------------------------------------[m
+ src/llamafactory/model/model_utils/visual.py                               |   6 [32m+[m[31m--[m
+ src/llamafactory/model/patcher.py                                          |  17 [31m--------[m
+ src/llamafactory/train/dpo/trainer.py                                      |   5 [32m+[m[31m--[m
+ src/llamafactory/train/ksft/__init__.py                                    |  18 [32m+++++++++[m
+ src/llamafactory/train/ksft/workflow.py                                    | 113 [32m+++++++++++++++++++++++++++++++++++++++++++++++++++++[m
+ src/llamafactory/train/mca/__init__.py                                     |  18 [32m+++++++++[m
+ src/llamafactory/train/mca/trainer.py                                      |  15 [32m++++++++[m
+ src/llamafactory/train/mca/workflow.py                                     | 295 [32m++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[m
+ src/llamafactory/train/trainer_utils.py                                    |   3 [32m++[m
+ src/llamafactory/train/tuner.py                                            |  30 [32m+++++++++++++[m[31m--[m
+ src/llamafactory/v1/plugins/data_plugins/converter.py                      |  87 [32m++++++++++++++++++++++++++++++++++++++++[m[31m-[m
+ src/llamafactory/v1/plugins/model_plugins/kernels/constants.py             |   8 [32m++[m[31m--[m
+ src/llamafactory/v1/plugins/model_plugins/kernels/mlp/npu_swiglu.py        |   8 [32m+[m[31m---[m
+ src/llamafactory/v1/plugins/model_plugins/kernels/registry.py              |  26 [32m++++[m[31m---------[m
+ src/llamafactory/v1/plugins/model_plugins/kernels/rms_norm/npu_rms_norm.py |   1 [31m-[m
+ src/llamafactory/v1/plugins/model_plugins/kernels/rope/npu_rope.py         |   4 [32m+[m[31m-[m
+ src/llamafactory/v1/plugins/trainer_plugins/distributed/accelerate.py      |  10 [32m++[m[31m---[m
+ tests_v1/plugins/data_plugins/test_converter.py                            |  49 [32m+++++++++++++++++++++++[m
+ tests_v1/plugins/model_plugins/test_kernel_plugin.py                       |   6 [32m+[m[31m--[m
+ 69 files changed, 3055 insertions(+), 268 deletions(-)
+ create mode 100644 data/v1_dpo_demo.jsonl
+ create mode 100644 data/v1_dpo_demo.yaml
+ create mode 100644 docker/docker-cuda/Dockerfile.megatron
+ create mode 100644 examples/inference/deepseek2_lora_sft_kt.yaml
+ create mode 100644 examples/inference/deepseek3_kt.yaml
+ create mode 100644 examples/inference/deepseek3_lora_sft_kt.yaml
+ create mode 100644 examples/kt_optimize_rules/DeepSeek-V2-Chat-sft-amx.yaml
+ create mode 100644 examples/kt_optimize_rules/DeepSeek-V2-Chat.yaml
+ create mode 100644 examples/kt_optimize_rules/DeepSeek-V2-Lite-Chat-sft-amx-multi-gpu.yaml
+ create mode 100644 examples/kt_optimize_rules/DeepSeek-V2-Lite-Chat-sft-amx.yaml
+ create mode 100644 examples/kt_optimize_rules/DeepSeek-V2-Lite-Chat-sft.yaml
+ create mode 100644 examples/kt_optimize_rules/DeepSeek-V2-Lite-Chat.yaml
+ create mode 100644 examples/kt_optimize_rules/DeepSeek-V3-Chat-amx.yaml
+ create mode 100644 examples/kt_optimize_rules/DeepSeek-V3-Chat-sft-amx-multi-gpu-4.yaml
+ create mode 100644 examples/kt_optimize_rules/DeepSeek-V3-Chat-sft-amx-multi-gpu.yaml
+ create mode 100644 examples/kt_optimize_rules/DeepSeek-V3-Chat-sft-amx.yaml
+ create mode 100644 examples/megatron/qwen2_vl_full.yaml
+ create mode 100644 examples/megatron/qwen3_moe_full.yaml
+ create mode 100644 examples/train_lora/deepseek2_lora_sft_kt.yaml
+ create mode 100644 examples/train_lora/deepseek3_lora_sft_kt.yaml
+ create mode 100644 scripts/megatron_merge.py
+ create mode 100644 src/llamafactory/chat/kt_engine.py
+ create mode 100644 src/llamafactory/model/model_utils/ktransformers.py
+ delete mode 100644 src/llamafactory/model/model_utils/sdpa_npu_redirect.py
+ create mode 100644 src/llamafactory/train/ksft/__init__.py
+ create mode 100644 src/llamafactory/train/ksft/workflow.py
+ create mode 100644 src/llamafactory/train/mca/__init__.py
+ create mode 100644 src/llamafactory/train/mca/trainer.py
+ create mode 100644 src/llamafactory/train/mca/workflow.py
+[?2004h[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git ad[Kđ [K[Kdd .
+[?2004lgit [?2004h[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit[K[K[K[K[K[Kcommit -m ""u"p"d"a"t"e"
+[?2004l[main 7c0cea7a] update
+ 118 files changed, 32638 insertions(+), 54383 deletions(-)
+ delete mode 100644 .github/CODE_OF_CONDUCT.md
+ delete mode 100644 .github/CONTRIBUTING.md
+ delete mode 100644 .github/ISSUE_TEMPLATE/1-bug-report.yml
+ delete mode 100644 .github/ISSUE_TEMPLATE/2-feature-request.yml
+ delete mode 100644 .github/ISSUE_TEMPLATE/config.yml
+ delete mode 100644 .github/PULL_REQUEST_TEMPLATE.md
+ delete mode 100644 .github/SECURITY.md
+ delete mode 100644 .github/workflows/docker.yml
+ delete mode 100644 .github/workflows/label_issue.yml
+ delete mode 100644 .github/workflows/publish.yml
+ delete mode 100644 .github/workflows/tests.yml
+ delete mode 100644 assets/logo.png
+ delete mode 100644 assets/sponsors/serpapi.svg
+ delete mode 100644 assets/sponsors/warp.jpg
+ delete mode 100644 assets/thirdparty/colab.svg
+ delete mode 100644 assets/thirdparty/discord.svg
+ delete mode 100644 assets/thirdparty/dsw.svg
+ delete mode 100644 assets/thirdparty/lab4ai.svg
+ delete mode 100644 assets/thirdparty/online.svg
+ delete mode 100644 data/README.md
+ delete mode 100644 data/README_zh.md
+ delete mode 100644 data/alpaca_en_demo.json
+ delete mode 100644 data/alpaca_zh_demo.json
+ delete mode 100644 data/c4_demo.jsonl
+ create mode 100644 data/competition_math_train_alpaca.jsonl
+ delete mode 100644 data/dpo_en_demo.json
+ delete mode 100644 data/dpo_zh_demo.json
+ delete mode 100644 data/glaive_toolcall_en_demo.json
+ delete mode 100644 data/glaive_toolcall_zh_demo.json
+ create mode 100644 data/gsm8k_test_alpaca.jsonl
+ create mode 100644 data/gsm8k_train_alpaca.jsonl
+ delete mode 100644 data/identity.json
+ delete mode 100644 data/kto_en_demo.json
+ create mode 100644 data/logiqa_test_alpaca.jsonl
+ create mode 100644 data/logiqa_train_alpaca.jsonl
+ create mode 100644 data/logiqa_validation_alpaca.jsonl
+ delete mode 100644 data/mllm_audio_demo.json
+ delete mode 100644 data/mllm_demo.json
+ delete mode 100644 data/mllm_demo_data/1.jpg
+ delete mode 100644 data/mllm_demo_data/1.mp3
+ delete mode 100644 data/mllm_demo_data/1.mp4
+ delete mode 100644 data/mllm_demo_data/2.avi
+ delete mode 100644 data/mllm_demo_data/2.jpg
+ delete mode 100644 data/mllm_demo_data/2.wav
+ delete mode 100644 data/mllm_demo_data/3.flac
+ delete mode 100644 data/mllm_demo_data/3.jpg
+ delete mode 100644 data/mllm_demo_data/3.mp4
+ delete mode 100644 data/mllm_demo_data/4.mp3
+ delete mode 100644 data/mllm_demo_data/4.mp4
+ delete mode 100644 data/mllm_video_audio_demo.json
+ delete mode 100644 data/mllm_video_demo.json
+ create mode 100644 data/prepare_datasets.py
+ delete mode 100644 data/reason_tool_use_demo_50.jsonl
+ delete mode 100644 data/v1_sft_demo.jsonl
+ delete mode 100644 data/v1_sft_demo.yaml
+ delete mode 100644 data/wiki_demo.txt
+ delete mode 100644 docker/docker-cuda/Dockerfile
+ delete mode 100644 docker/docker-cuda/Dockerfile.base
+ delete mode 100644 docker/docker-cuda/README.md
+ delete mode 100644 docker/docker-cuda/docker-compose.yml
+ delete mode 100644 docker/docker-npu/docker-compose.yml
+ delete mode 100644 docker/docker-rocm/Dockerfile
+ delete mode 100644 docker/docker-rocm/docker-compose.yml
+ create mode 100644 examples/train_lora/intern3_5vl_lora_sft.yaml
+ create mode 100644 length_stats.py
+ create mode 100644 scripts/0_gptoss20b.sh
+ create mode 100644 scripts/0_gptoss20b_ofa.sh
+ create mode 100644 scripts/0_gptoss20b_ofa_compmath.sh
+ create mode 100644 scripts/0_gptoss20b_ofa_vast.sh
+ create mode 100644 scripts/0_openai_responses_infer.py
+ create mode 100644 scripts/0_serve.sh
+ create mode 100644 scripts/0_serve_ofa.sh
+ create mode 100644 scripts/0_serve_ofa_vast.sh
+ create mode 100644 scripts/1_filter_by_label.py
+ create mode 100644 scripts/2_filter_by_token.py
+ create mode 100644 scripts/3_filter_by_duplication.py
+ delete mode 100644 scripts/bench_qwen.py
+ delete mode 100644 scripts/eval_bleu_rouge.py
+ delete mode 100644 scripts/llama_pro.py
+ delete mode 100644 scripts/loftq_init.py
+ create mode 100644 scripts/lowest_reasoning_samples.py
+ delete mode 100644 scripts/pissa_init.py
+ delete mode 100644 scripts/qwen_omni_merge.py
+ delete mode 100644 tests/check_license.py
+ delete mode 100644 tests/data/processor/test_feedback.py
+ delete mode 100644 tests/data/processor/test_pairwise.py
+ delete mode 100644 tests/data/processor/test_processor_utils.py
+ delete mode 100644 tests/data/processor/test_supervised.py
+ delete mode 100644 tests/data/processor/test_unsupervised.py
+ delete mode 100644 tests/data/test_collator.py
+ delete mode 100644 tests/data/test_converter.py
+ delete mode 100644 tests/data/test_formatter.py
+ delete mode 100644 tests/data/test_loader.py
+ delete mode 100644 tests/data/test_mm_plugin.py
+ delete mode 100644 tests/data/test_template.py
+ delete mode 100644 tests/e2e/test_chat.py
+ delete mode 100644 tests/e2e/test_sglang.py
+ delete mode 100644 tests/e2e/test_train.py
+ delete mode 100644 tests/eval/test_eval_template.py
+ delete mode 100644 tests/model/model_utils/test_add_tokens.py
+ delete mode 100644 tests/model/model_utils/test_attention.py
+ delete mode 100644 tests/model/model_utils/test_checkpointing.py
+ delete mode 100644 tests/model/model_utils/test_misc.py
+ delete mode 100644 tests/model/model_utils/test_packing.py
+ delete mode 100644 tests/model/model_utils/test_visual.py
+ delete mode 100644 tests/model/test_base.py
+ delete mode 100644 tests/model/test_freeze.py
+ delete mode 100644 tests/model/test_full.py
+ delete mode 100644 tests/model/test_lora.py
+ delete mode 100644 tests/model/test_pissa.py
+ delete mode 100644 tests/train/test_sft_trainer.py
+ delete mode 100644 tests/version.txt
+ delete mode 100644 tests_v1/core/test_data_engine.py
+ create mode 100644 tmp_dataset/gsm8k/sample.jsonl
+ create mode 100644 typescript
+[?2004h[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git ps[Ku[Kú[Kush o[Kỏi[K[Korigin main
+[?2004lremote: Permission to hiyouga/LLaMA-Factory.git denied to Koii2k3.
+fatal: unable to access 'https://github.com/hiyouga/LLaMA-Factory.git/': The requested URL returned error: 403
+[?2004h[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git push origin maincommit -m "update"add .[Kpull add .commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ git commit -m "update"[K[K[K[Kls
+[?2004lCITATION.cff  [0m[01;34mdocker[0m    generated_predictions.jsonl  LICENSE   MANIFEST.in  pyproject.toml  README_zh.md      [01;34msaves[0m    setup.py  [01;34mtests_v1[0m     typescript
+[01;34mdata[0m          [01;34mexamples[0m  length_stats.py              Makefile  [01;34moutput[0m       README.md       requirements.txt  [01;34mscripts[0m  [01;34msrc[0m       [01;34mtmp_dataset[0m
+[?2004h[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS/LLaMA-Factory[00m$ cd [K ..
+[?2004l[?2004h[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS[00m$ cd ..[3Pls
+[?2004l[0m[01;34mLLaMA-Factory[0m  README.md
+[?2004h[01;32mkhoina@s96gb-WS-C621E-SAGE-Series[00m:[01;34m~/BizGen/hf_vqa/src/LLaMA-OSS[00m$ cd c[K[1Plscd ..[3Pls[K[Kgit statu[Kú[Kus
+[?2004lOn branch main
+Your branch is behind 'origin/main' by 2 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	[31mmodified:   LLaMA-Factory/.env.local[m
+	[31mdeleted:    LLaMA-Factory/README.md[m
+	[31mdeleted:    LLaMA-Factory/README_zh.md[m
+	[31mmodified:   LLaMA-Factory/examples/inference/llama3.yaml[m
+	[31mmodified:   LLaMA-Factory/examples/inference/llama3_full_sft.yaml[m
+	[31mmodified:   LLaMA-Factory/examples/inference/llama3_lora_sft.yaml[m
+	[31mmodified:   LLaMA-Factory/examples/inference/qwen2_5vl.yaml[m
+	[31mmodified:   LLaMA-Factory/scripts/0_openai_responses_infer.py[m
+	[31mmodified:   LLaMA-Factory/scripts/3_filter_by_duplication.py[m
+	[31mmodified:   LLaMA-Factory/setup.py[m
+	[31mmodified:   LLaMA-Factory/src/llamafactory/chat/chat_model.py[m
+	[31mmodified:   LLaMA-Factory/src/llamafactory/data/loader.py[m
+	[31mmodified:   LLaMA-Factory/src/llamafactory/data/mm_plugin.py[m
+	[31mmodified:   LLaMA-Factory/src/llamafactory/data/parser.py[m
+	[31mmodified:   LLaMA-Factory/src/llamafactory/data/template.py[m
+	[31mmodified:   LLaMA-Factory/src/llamafactory/extras/constants.py[m
+	[31mmodified:   LLaMA-Factory/src/llamafactory/extras/misc.py[m
+	[31mmodified:   LLaMA-Factory/src/llamafactory/extras/packages.py[m
+	[31mmodified:   LL

@@ -299,6 +299,7 @@ def infer_via_openai_responses_fast(
         client = AsyncOpenAI(
             base_url=openai_base_url, 
             api_key=openai_api_key or "not-needed",
+            timeout=60
         )
         
         # Create main progress bars
