@@ -30,6 +30,8 @@ DEFAULT_OUTPUT_ROOT = BASE_DIR / "new_dataset" / "3_fbd"
 DEFAULT_OUTPUT_SUFFIX = "_dedup"
 
 WHITESPACE_RE = re.compile(r"\s+")
+MAX_TOKENS_FOR_OVERLAP = 256
+MAX_MISMATCH_TOKENS = 4
 
 
 @dataclass
@@ -48,6 +50,7 @@ class Record:
     token_count: int = 0
     data: Optional[Dict[str, Any]] = None
     position: int = -1
+    normalized_reasoning: str = ""
 
 
 def parse_args() -> argparse.Namespace:
@@ -89,7 +92,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--overlap-threshold",
         type=float,
-        default=0.75,
+        default=0.5,
         help=(
             "Drop the shorter sample among matching ids when the longest common contiguous "
             "token span covers at least this fraction of the shorter sample. Value must be "
@@ -133,7 +136,9 @@ def normalize_reasoning_text(
     return text
 
 
-def longest_common_span_ratio(tokens_a: List[str], tokens_b: List[str]) -> float:
+def longest_common_span_ratio(
+    tokens_a: List[str], tokens_b: List[str], mismatch_buffer: int = 0
+) -> float:
     if not tokens_a or not tokens_b:
         return 0.0
 
@@ -153,7 +158,11 @@ def longest_common_span_ratio(tokens_a: List[str], tokens_b: List[str]) -> float
         prev = curr
 
     shorter_len = min(len_a, len_b)
-    return (max_span / shorter_len) if shorter_len else 0.0
+    if not shorter_len:
+        return 0.0
+
+    adjusted_span = min(shorter_len, max_span + max(0, mismatch_buffer))
+    return adjusted_span / shorter_len
 
 
 def deduplicate_file(
@@ -214,6 +223,7 @@ def deduplicate_file(
                 tokens=tokens,
                 token_count=len(tokens),
                 data=sample,
+                normalized_reasoning=normalized,
             )
             records.append(record)
             record.position = len(records) - 1
@@ -223,7 +233,31 @@ def deduplicate_file(
 
             remove_candidate = False
             for existing in list(active_entries):
-                span_ratio = longest_common_span_ratio(record.tokens, existing.tokens)
+                if (
+                    record.normalized_reasoning
+                    and record.normalized_reasoning == existing.normalized_reasoning
+                ):
+                    record.active = False
+                    rejected_records.append(
+                        {
+                            "sample_id": sample_id,
+                            "kept_index": existing.position,
+                            "dropped_index": record.position,
+                            "span_ratio": 1.0,
+                            "kept": existing.data,
+                            "dropped": record.data,
+                        }
+                    )
+                    remove_candidate = True
+                    break
+
+                truncated_new = record.tokens[:MAX_TOKENS_FOR_OVERLAP]
+                truncated_existing = existing.tokens[:MAX_TOKENS_FOR_OVERLAP]
+                span_ratio = longest_common_span_ratio(
+                    truncated_new,
+                    truncated_existing,
+                    mismatch_buffer=MAX_MISMATCH_TOKENS,
+                )
                 if span_ratio >= options.overlap_threshold:
                     if record.token_count <= existing.token_count:
                         record.active = False
@@ -351,7 +385,7 @@ def process_dataset(
                 total,
                 kept,
                 dropped,
-                rejected,
+                # rejected,
                 f"{keep_rate:.1f}%" if total else "n/a",
             ]
         )
@@ -362,7 +396,7 @@ def process_dataset(
 
     processed_files = len(results)
     total_dropped = total_samples - total_kept
-    headers = ["File", "Total", "Kept", "Dropped", "Rejected", "Keep Rate"]
+    headers = ["File", "Total", "Kept", "Rejected", "Keep Rate"]
     print(f"[{dataset}] Per-file stats:")
     print(tabulate(per_file_rows, headers=headers, tablefmt="grid"))
 
