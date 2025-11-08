@@ -7,7 +7,6 @@ CUDA_VISIBLE_DEVICES=1 python3 scripts/vllm_infer.py \
     --cutoff_len 2048 \
     --max_new_tokens 8096 \
     --seed 42 \
-    --vllm_config '{"gpu_memory_utilization": 0.95, "max_model_len": 10144, "max_num_batched_tokens": 20288}' \
+    --vllm_config '{"gpu_memory_utilization": 0.9, "max_model_len": 10144, "max_num_batched_tokens": 20288}' \
     --save_name llama3_2_lora_sft_concat2_eval.jsonl \
-    --temperature 0.0 \
-    --skip_special_tokens true \
+    --temperature 1.0 \

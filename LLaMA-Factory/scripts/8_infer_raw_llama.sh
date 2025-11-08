@@ -1,0 +1,12 @@
+CUDA_VISIBLE_DEVICES=1 python3 scripts/vllm_infer.py \
+    --model_name_or_path meta-llama/Llama-3.2-3B-Instruct \
+    --dataset sft_grpo_val \
+    --template llama3 \
+    --batch_size 2048 \
+    --default_system "" \
+    --cutoff_len 2048 \
+    --max_new_tokens 8096 \
+    --seed 42 \
+    --vllm_config '{"gpu_memory_utilization": 0.9, "max_model_len": 10144, "max_num_batched_tokens": 20288}' \
+    --save_name llama3_2_base_eval.jsonl \
+    --temperature 1.0 \
