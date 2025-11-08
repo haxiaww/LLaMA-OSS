@@ -59,7 +59,7 @@
   },
 
   "sft_low": {
-    "file_name": "sft_low.jsonl",
+    "file_name": "combined_sft_train_low.jsonl",
     "formatting": "alpaca",
     "columns": {
       "prompt": "prompt",
@@ -68,7 +68,7 @@
   },
 
   "sft_medium": {
-    "file_name": "sft_medium.jsonl",
+    "file_name": "combined_sft_train_medium.jsonl",
     "formatting": "alpaca",
     "columns": {
       "prompt": "prompt",
@@ -77,7 +77,7 @@
   },
 
   "sft_high": {
-    "file_name": "sft_high.jsonl",
+    "file_name": "combined_sft_train_high.jsonl",
     "formatting": "alpaca",
     "columns": {
       "prompt": "prompt",
@@ -85,8 +85,8 @@
     }
   },
 
-  "sft_val": {
-    "file_name": "sft_val.jsonl",
+  "sft_grpo_val": {
+    "file_name": "combined_val.jsonl",
     "formatting": "alpaca",
     "columns": {
       "prompt": "prompt",
