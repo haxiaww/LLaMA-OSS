@@ -6,8 +6,8 @@ trust_remote_code: true
 stage: sft
 do_train: true
 finetuning_type: lora
-lora_rank: 32
-lora_alpha: 64
+lora_rank: 16
+lora_alpha: 32
 lora_target: all
 disable_shuffling: true
 
@@ -16,13 +16,14 @@ dataset: sft_low,sft_medium,sft_high
 mix_strategy: concat
 template: llama3
 cutoff_len: 2048
+max_new_tokens: 8096
 max_samples: 1000000
 overwrite_cache: true
 preprocessing_num_workers: 16
 dataloader_num_workers: 4
 
 ### output
-output_dir: saves/llama3-8b/lora/sft/concat
+output_dir: saves/llama3-8b/lora/sft/concat2
 logging_steps: 10
 save_steps: 500
 plot_loss: true
@@ -36,8 +37,9 @@ enable_liger_kernel: true
 use_unsloth_gc: true
 
 ### train
-per_device_train_batch_size: 8
-gradient_accumulation_steps: 2
+seed: 42
+per_device_train_batch_size: 4
+gradient_accumulation_steps: 4
 learning_rate: 2.0e-4
 num_train_epochs: 0.5
 lr_scheduler_type: cosine

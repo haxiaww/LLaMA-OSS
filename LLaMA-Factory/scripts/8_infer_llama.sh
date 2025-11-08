@@ -1,0 +1,14 @@
+CUDA_VISIBLE_DEVICES=1 python3 scripts/vllm_infer.py \
+    --model_name_or_path output/llama3_2_lora_sft_concat2 \
+    --dataset sft_grpo_val \
+    --template llama3 \
+    --batch_size 2048 \
+    --default_system "" \
+    --cutoff_len 2048 \
+    --max_new_tokens 8096 \
+    --seed 42 \
+    --vllm_config '{"gpu_memory_utilization": 0.95, "max_model_len": 10144, "max_num_batched_tokens": 20288}' \
+    --save_name llama3_2_lora_sft_concat2_eval.jsonl \
+    --temperature 0.0 \
+    --image_max_pixels 2408448 \
+    --skip_special_tokens true \
