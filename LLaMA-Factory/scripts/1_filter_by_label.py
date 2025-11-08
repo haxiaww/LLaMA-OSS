@@ -28,6 +28,12 @@ BOXED_PATTERN = re.compile(r"\\boxed\{([^}]+)\}")
 HASHED_PATTERN = re.compile(r"####\s*([^\n]+)")
 
 
+def _clean_candidate(text: str) -> Optional[str]:
+    """Normalize extracted answers (e.g., drop trailing sentence periods)."""
+    cleaned = text.strip().rstrip(".").strip()
+    return cleaned or None
+
+
 def _is_prediction_complete(pred: Optional[str]) -> bool:
     if not isinstance(pred, str):
         return False
@@ -51,22 +57,22 @@ def extract_answer(value: Any) -> Optional[str]:
 
     matches = BOXED_PATTERN.findall(stripped)
     for match in matches:
-        candidate = match.strip()
+        candidate = _clean_candidate(match)
         if candidate:
-            return candidate
+            return candidate.replace("<|end|><|return|>", "")
 
     hash_match = HASHED_PATTERN.search(stripped)
     if hash_match:
-        candidate = hash_match.group(1).strip()
+        candidate = _clean_candidate(hash_match.group(1))
         if candidate:
-            return candidate
+            return candidate.replace("<|end|><|return|>", "")
     return None
 
 
 def extract_label_answer(dataset: str, label_raw: Any) -> Optional[str]:
     """Extract label answer using dataset-specific rules."""
     if dataset in {"gsm8k", "compmath"}:
-        return extract_answer(label_raw).replace("<|end|><|return|>", "")
+        return extract_answer(label_raw)
     if dataset == "logiqa":
         if not isinstance(label_raw, str):
             return None
