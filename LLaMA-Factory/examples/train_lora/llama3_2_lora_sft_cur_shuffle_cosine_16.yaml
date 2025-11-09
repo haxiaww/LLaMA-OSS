@@ -12,8 +12,8 @@ lora_target: all
 
 ### dataset
 dataset: sft_low,sft_medium,sft_high
-mix_strategy: interleave_over
-disable_shuffling: true
+mix_strategy: concat
+# disable_shuffling: true
 template: llama3
 cutoff_len: 10144
 max_samples: 1000000
@@ -34,6 +34,7 @@ report_to: none  # choices: [none, wandb, tensorboard, swanlab, mlflow]
 flash_attn: fa2
 enable_liger_kernel: true
 use_unsloth_gc: true
+sft_packing: true
 
 ### train
 seed: 42
@@ -41,7 +42,7 @@ per_device_train_batch_size: 16
 gradient_accumulation_steps: 1
 learning_rate: 2.0e-4
 num_train_epochs: 1.0
-lr_scheduler_type: linear
+lr_scheduler_type: cosine
 warmup_ratio: 0.05
 bf16: true
 ddp_timeout: 180000000
