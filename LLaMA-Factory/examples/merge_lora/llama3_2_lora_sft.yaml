@@ -2,12 +2,12 @@
 
 ### model
 model_name_or_path: meta-llama/Llama-3.2-3B-Instruct
-adapter_name_or_path: saves/llama3-8b/lora/sft/concat2
+adapter_name_or_path: saves/llama3-8b/lora/sft/concat2_shuffle
 template: llama3
 trust_remote_code: true
 
 ### export
-export_dir: output/llama3_2_lora_sft_concat2
+export_dir: output/llama3_2_lora_sft_concat2_shuffle
 export_size: 5
 export_device: cpu  # choices: [cpu, auto]
 export_legacy_format: false

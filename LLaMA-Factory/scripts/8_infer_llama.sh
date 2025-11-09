@@ -8,5 +8,5 @@ CUDA_VISIBLE_DEVICES=1 python3 scripts/vllm_infer.py \
     --max_new_tokens 8096 \
     --seed 42 \
     --vllm_config '{"gpu_memory_utilization": 0.9, "max_model_len": 10144, "max_num_batched_tokens": 20288}' \
-    --save_name llama3_2_lora_sft_concat2_eval.jsonl \
+    --save_name scripts/sft/8_infer/llama3_2_lora_sft_concat2_eval.jsonl \
     --temperature 1.0 \
