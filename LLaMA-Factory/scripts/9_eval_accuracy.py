@@ -29,7 +29,18 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "files",
-        help="Comma-separated list of JSONL files to evaluate.",
+        nargs="?",
+        default="",
+        help=(
+            "Comma-separated list of JSONL files to evaluate. "
+            "Pass the literal value 'all' to evaluate every JSONL inside --input-dir."
+        ),
+    )
+    parser.add_argument(
+        "--input-dir",
+        type=Path,
+        default=Path("scripts/sft/8_infer"),
+        help="Directory used to resolve relative file paths (default: scripts/sft/8_infer).",
     )
     parser.add_argument(
         "--strict",
@@ -118,9 +129,32 @@ def save_wrong_examples(path: Path, examples: List[Dict[str, object]]) -> None:
 
 def main() -> None:
     args = parse_args()
-    files = [Path(item.strip()) for item in args.files.split(",") if item.strip()]
+    base_dir = args.input_dir
+    files_arg = (args.files or "").strip()
+    files: List[Path] = []
+    if files_arg.lower() == "all":
+        if not base_dir.is_dir():
+            raise ValueError(
+                f"--input-dir '{base_dir}' is not a directory. "
+                "Create it or pass a different --input-dir."
+            )
+        files = sorted(path for path in base_dir.glob("*.jsonl") if path.is_file())
+    elif files_arg:
+        for item in files_arg.split(","):
+            raw = item.strip()
+            if not raw:
+                continue
+            candidate = Path(raw)
+            if not candidate.is_absolute():
+                candidate = base_dir / candidate
+            files.append(candidate)
+    else:
+        raise ValueError(
+            "No files specified. Provide a comma-separated list or use 'all' to scan --input-dir."
+        )
+
     if not files:
-        raise ValueError("No valid files provided.")
+        raise ValueError("No files to evaluate after processing the provided arguments.")
 
     rows: List[List[object]] = []
     grand_total = 0
