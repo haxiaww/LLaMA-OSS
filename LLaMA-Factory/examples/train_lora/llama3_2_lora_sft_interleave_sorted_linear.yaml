@@ -51,4 +51,4 @@ resume_from_checkpoint: null
 eval_dataset: sft_grpo_val
 per_device_eval_batch_size: 1
 eval_strategy: steps
-eval_steps: 200
+eval_steps: 300
