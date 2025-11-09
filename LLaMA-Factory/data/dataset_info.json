@@ -1,12 +1,4 @@
 {
-  "high_reason_gsm8k_train": {
-    "file_name": "gptoss20b_gsm8k_train_results_high_fbl_tokens_fbt_128.jsonl",
-    "formatting": "alpaca",
-    "columns": {
-      "prompt": "step_prompt"
-    }
-  },
-  
   "gsm8k_train": {
     "file_name": "gsm8k_train_alpaca.jsonl",
     "formatting": "alpaca",
