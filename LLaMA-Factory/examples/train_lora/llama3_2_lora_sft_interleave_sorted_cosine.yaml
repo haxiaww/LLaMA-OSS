@@ -6,8 +6,8 @@ trust_remote_code: true
 stage: sft
 do_train: true
 finetuning_type: lora
-lora_rank: 16
-lora_alpha: 32
+lora_rank: 8
+lora_alpha: 8
 lora_target: all
 
 ### dataset
@@ -22,7 +22,7 @@ preprocessing_num_workers: 16
 dataloader_num_workers: 4
 
 ### output
-output_dir: saves/llama3-8b/lora/sft/concat2_shuffle
+output_dir: saves/llama3_2_lora_sft_interleave_sorted_cosine
 logging_steps: 10
 save_steps: 500
 plot_loss: true
@@ -37,8 +37,8 @@ use_unsloth_gc: true
 
 ### train
 seed: 42
-per_device_train_batch_size: 16
-gradient_accumulation_steps: 1
+per_device_train_batch_size: 8
+gradient_accumulation_steps: 2
 learning_rate: 2.0e-4
 num_train_epochs: 1.0
 lr_scheduler_type: cosine
@@ -51,4 +51,4 @@ resume_from_checkpoint: null
 eval_dataset: sft_grpo_val
 per_device_eval_batch_size: 1
 eval_strategy: steps
-eval_steps: 100
+eval_steps: 200
