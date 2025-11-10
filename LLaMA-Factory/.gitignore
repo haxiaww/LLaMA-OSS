@@ -2,7 +2,7 @@
 /scripts/new_dataset/
 /*.jsonl
 /data/*.zip
-
+/scripts/sft/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

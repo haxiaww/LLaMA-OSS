@@ -6,8 +6,8 @@ trust_remote_code: true
 stage: sft
 do_train: true
 finetuning_type: lora
-lora_rank: 8
-lora_alpha: 8
+lora_rank: 16
+lora_alpha: 16
 lora_target: all
 
 ### dataset
