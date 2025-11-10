@@ -1,5 +1,5 @@
 # Custom
-/scripts/new_dataset/
+/scripts/new_dataset/*
 /*.jsonl
 /data/*.zip
 /scripts/sft/
@@ -176,8 +176,8 @@ ms_cache/
 om_cache/
 llamaboard_cache/
 llamaboard_config/
-saves/
-output/
+saves/*
+output/*
 wandb/
 swanlog/
 generated_predictions.jsonl

@@ -1,0 +1,54 @@
+### model
+model_name_or_path: Qwen/Qwen2.5-3B-Instruct
+trust_remote_code: true
+
+### method
+stage: sft
+do_train: true
+finetuning_type: lora
+lora_rank: 16
+lora_alpha: 16
+lora_target: all
+
+### dataset
+dataset: sft_low,sft_medium,sft_high
+mix_strategy: concat
+disable_shuffling: true
+template: qwen
+cutoff_len: 5120
+max_samples: 1000000
+overwrite_cache: true
+preprocessing_num_workers: 16
+dataloader_num_workers: 4
+
+### output
+output_dir: saves/qwen2_5_3b_sft_concat_sorted
+logging_steps: 10
+save_steps: 1000
+plot_loss: true
+overwrite_output_dir: false
+save_only_model: false
+report_to: none  # choices: [none, wandb, tensorboard, swanlab, mlflow]
+
+### accelerator
+flash_attn: fa2
+enable_liger_kernel: true
+use_unsloth_gc: true
+
+### train
+seed: 42
+per_device_train_batch_size: 16
+gradient_accumulation_steps: 1
+learning_rate: 2.0e-4
+num_train_epochs: 2.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.05
+bf16: true
+ddp_timeout: 180000000
+resume_from_checkpoint: null
+
+### eval
+# eval_dataset: sft_grpo_val
+# per_device_eval_batch_size: 1
+# eval_strategy: steps
+# eval_steps: 300

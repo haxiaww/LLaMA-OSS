@@ -1,5 +1,5 @@
-CUDA_VISIBLE_DEVICES=2 python3 scripts/vllm_infer.py \
-    --model_name_or_path output/1e_2e5 \
+CUDA_VISIBLE_DEVICES=0 python3 scripts/vllm_infer.py \
+    --model_name_or_path output/2e_1e4_2500 \
     --dataset sft_grpo_val \
     --template llama3 \
     --batch_size 2048 \
@@ -8,5 +8,5 @@ CUDA_VISIBLE_DEVICES=2 python3 scripts/vllm_infer.py \
     --max_new_tokens 4096 \
     --seed 42 \
     --vllm_config '{"gpu_memory_utilization": 0.9, "max_model_len": 5120, "max_num_batched_tokens": 20288}' \
-    --save_name scripts/sft/8_infer/1e_2e5.jsonl \
+    --save_name scripts/sft/8_infer/2e_1e4_2500.jsonl \
     --temperature 1.0 \
