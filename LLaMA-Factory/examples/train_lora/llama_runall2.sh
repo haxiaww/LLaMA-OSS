@@ -1,0 +1,2 @@
+CUDA_VISIBLE_DEVICES=1 llamafactory-cli train examples/train_lora/3_llama3_2_lora_sft_interleave_shuffle.yaml
+CUDA_VISIBLE_DEVICES=1 llamafactory-cli train examples/train_lora/4_llama3_2_lora_sft_interleave_sorted.yaml
