@@ -1,0 +1,14 @@
+### Note: DO NOT use quantized model or quantization_bit when merging lora adapters
+# llamafactory-cli export examples/merge_lora/llama3_2_3b_sft_interleave_shuffle.yaml
+
+### model
+model_name_or_path: meta-llama/Llama-3.2-3B-Instruct
+adapter_name_or_path: saves/llama3_2_3b_sft_interleave_shuffle/checkpoint-3592
+template: llama3
+trust_remote_code: true
+
+### export
+export_dir: output/llama3_2_3b_sft_interleave_shuffle
+export_size: 5
+export_device: cpu  # choices: [cpu, auto]
+export_legacy_format: false
