@@ -2,7 +2,8 @@
 /scripts/new_dataset/*
 /*.jsonl
 /data/*.zip
-/scripts/sft/
+/scripts/sft/8_infer/*
+/scripts/sft/9_val/*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
