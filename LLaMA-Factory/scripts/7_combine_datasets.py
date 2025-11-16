@@ -64,7 +64,22 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def read_training_file(path: Path, dataset: str) -> List[Dict[str, object]]:
+def extract_reasoning_text(response: object) -> Optional[str]:
+    if not isinstance(response, str):
+        return None
+    start_tag = "<think>"
+    end_tag = "</think>"
+    start = response.find(start_tag)
+    if start == -1:
+        return None
+    end = response.find(end_tag, start + len(start_tag))
+    if end == -1:
+        return None
+    reasoning = response[start + len(start_tag) : end].strip()
+    return reasoning or None
+
+
+def read_training_file(path: Path, dataset: str, split: str) -> List[Dict[str, object]]:
     entries: List[Dict[str, object]] = []
     if not path.is_file():
         return entries
@@ -88,6 +103,12 @@ def read_training_file(path: Path, dataset: str) -> List[Dict[str, object]]:
                     record["reasoning_tokens"] = float(len(tokens))
                 else:
                     record["reasoning_tokens"] = float("inf")
+            if split == "grpo_train":
+                reasoning_field = record.get("reasoning")
+                if not isinstance(reasoning_field, str) or not reasoning_field.strip():
+                    extracted = extract_reasoning_text(record.get("response"))
+                    if extracted:
+                        record["reasoning"] = extracted
             entries.append(record)
     return entries
 
@@ -129,7 +150,7 @@ def process_combination(
 
     for dataset in datasets:
         input_path = input_root / dataset / f"{dataset}_{split}_{mode}_think.jsonl"
-        entries = read_training_file(input_path, dataset=dataset)
+        entries = read_training_file(input_path, dataset=dataset, split=split)
         if not entries:
             continue
         per_dataset_counts[dataset] = len(entries)

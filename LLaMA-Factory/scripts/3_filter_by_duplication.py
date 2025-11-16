@@ -92,7 +92,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--overlap-threshold",
         type=float,
-        default=0.7,
+        default=0.7
+        ,
         help=(
             "Drop the shorter sample among matching ids when the longest common contiguous "
             "token span covers at least this fraction of the shorter sample. Value must be "

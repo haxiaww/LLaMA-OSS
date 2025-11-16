@@ -53,6 +53,11 @@ def parse_args() -> argparse.Namespace:
         default=Path("scripts/sft/9_eval"),
         help="Directory to save wrong predictions per input file (default: 9_eval).",
     )
+    parser.add_argument(
+        "--show-details",
+        action="store_true",
+        help="Show detailed error breakdown (no_predict, no_label, wrong_answer).",
+    )
     return parser.parse_args()
 
 
@@ -70,16 +75,25 @@ def normalize(value: Optional[str], strict: bool) -> Optional[str]:
         return None
     if strict:
         return value
-    return " ".join(value.split()).lower()
+    return " ".join(value.split()).lower().replace("\\%", "").replace("^\\circ", "").replace("\\$", "").replace("\\pi", "").replace(" ", "").strip()
 
 
-def evaluate_file(path: Path, strict: bool) -> Tuple[int, int, List[Dict[str, object]]]:
+def evaluate_file(path: Path, strict: bool) -> Tuple[int, int, List[Dict[str, object]], Dict[str, int]]:
     if not path.is_file():
         raise FileNotFoundError(f"File not found: {path}")
 
     total = 0
     correct = 0
     wrong_examples: List[Dict[str, object]] = []
+    
+    # Thống kê chi tiết các loại lỗi
+    stats = {
+        "no_predict": 0,  # Không extract được predict
+        "no_label": 0,    # Không extract được label
+        "no_both": 0,     # Không extract được cả hai
+        "wrong_answer": 0 # Extract được nhưng sai
+    }
+    
     with path.open("r", encoding="utf-8") as src:
         for raw_line in src:
             line = raw_line.strip()
@@ -90,19 +104,29 @@ def evaluate_file(path: Path, strict: bool) -> Tuple[int, int, List[Dict[str, ob
             except json.JSONDecodeError:
                 continue
 
+            # Extract boxed answers from prediction and label
             raw_predict = extract_boxed(record.get("predict"))
             raw_label = extract_boxed(record.get("label"))
             predicted = normalize(raw_predict, strict)
             label = normalize(raw_label, strict)
-            if label is None or predicted is None:
-                continue
+
+            # Count every record towards total (entire validation set)
             total += 1
-            if predicted == label:
-                correct += 1
-            else:
+
+            # If either side is missing/unparsable, treat as incorrect
+            if label is None or predicted is None:
+                # Phân loại lỗi
+                if label is None and predicted is None:
+                    stats["no_both"] += 1
+                elif predicted is None:
+                    stats["no_predict"] += 1
+                elif label is None:
+                    stats["no_label"] += 1
+                    
                 wrong_examples.append(
                     {
                         "file": str(path),
+                        "error_type": "extraction_failed",
                         "predict_raw": raw_predict,
                         "label_raw": raw_label,
                         "predict_normalized": predicted,
@@ -110,7 +134,24 @@ def evaluate_file(path: Path, strict: bool) -> Tuple[int, int, List[Dict[str, ob
                         "record": record,
                     }
                 )
-    return total, correct, wrong_examples
+                continue
+
+            if predicted == label:
+                correct += 1
+            else:
+                stats["wrong_answer"] += 1
+                wrong_examples.append(
+                    {
+                        "file": str(path),
+                        "error_type": "wrong_answer",
+                        "predict_raw": raw_predict,
+                        "label_raw": raw_label,
+                        "predict_normalized": predicted,
+                        "label_normalized": label,
+                        "record": record,
+                    }
+                )
+    return total, correct, wrong_examples, stats
 
 
 def format_stats(total: int, correct: int) -> Tuple[int, int, str]:
@@ -159,18 +200,46 @@ def main() -> None:
     rows: List[List[object]] = []
     grand_total = 0
     grand_correct = 0
+    grand_stats = {
+        "no_predict": 0,
+        "no_label": 0,
+        "no_both": 0,
+        "wrong_answer": 0
+    }
 
     wrong_dir = args.wrong_dir
     for file_path in files:
-        total, correct, wrong_examples = evaluate_file(file_path, strict=args.strict)
-        rows.append([str(file_path), total, correct, format_stats(total, correct)[2]])
+        total, correct, wrong_examples, stats = evaluate_file(file_path, strict=args.strict)
+        
+        # Cập nhật grand stats
+        for key in grand_stats:
+            grand_stats[key] += stats[key]
+        
+        if args.show_details:
+            rows.append([
+                str(file_path), 
+                total, 
+                correct, 
+                format_stats(total, correct)[2],
+                stats["no_predict"],
+                stats["no_label"],
+                stats["no_both"],
+                stats["wrong_answer"]
+            ])
+        else:
+            rows.append([str(file_path), total, correct, format_stats(total, correct)[2]])
+        
         grand_total += total
         grand_correct += correct
         if wrong_dir:
             wrong_path = wrong_dir / f"{file_path.stem}_wrong.jsonl"
             save_wrong_examples(wrong_path, wrong_examples)
 
-    headers = ["File", "Evaluated Samples", "Correct", "Accuracy"]
+    if args.show_details:
+        headers = ["File", "Total", "Correct", "Accuracy", "No Predict", "No Label", "No Both", "Wrong Answer"]
+    else:
+        headers = ["File", "Evaluated Samples", "Correct", "Accuracy"]
+    
     print(tabulate(rows, headers=headers, tablefmt="grid"))
 
     total_stats = format_stats(grand_total, grand_correct)
@@ -178,6 +247,20 @@ def main() -> None:
         f"\n[Summary] total={grand_total}, correct={grand_correct}, "
         f"accuracy={total_stats[2]}"
     )
+    
+    if args.show_details:
+        print("\n[Error Breakdown]")
+        print(f"  - Cannot extract predict: {grand_stats['no_predict']} "
+              f"({grand_stats['no_predict']/grand_total*100:.2f}%)")
+        print(f"  - Cannot extract label: {grand_stats['no_label']} "
+              f"({grand_stats['no_label']/grand_total*100:.2f}%)")
+        print(f"  - Cannot extract both: {grand_stats['no_both']} "
+              f"({grand_stats['no_both']/grand_total*100:.2f}%)")
+        print(f"  - Wrong answer: {grand_stats['wrong_answer']} "
+              f"({grand_stats['wrong_answer']/grand_total*100:.2f}%)")
+        total_errors = sum(grand_stats.values())
+        print(f"  - Total errors: {total_errors}/{grand_total} "
+              f"({total_errors/grand_total*100:.2f}%)")
 
 
 if __name__ == "__main__":

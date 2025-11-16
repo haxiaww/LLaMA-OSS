@@ -840,6 +840,16 @@ When launching training tasks, you can log in to SwanLab in three ways:
 2. Set the environment variable `SWANLAB_API_KEY` to your [API key](https://swanlab.cn/settings).
 3. Use the `swanlab login` command to complete the login.
 
+### Token-length statistics for `predict` text
+
+To inspect how many tokens the `predict` field occupies across a directory of JSONL files, run:
+
+```bash
+python scripts/predict_token_stats.py -i /path/to/jsonl/folder --model llama3 --output-dir stats
+```
+
+The script automatically picks `meta-llama/Llama-3.2-3B-Instruct`, `Qwen/Qwen2.5-3B-Instruct`, or `openai/gpt-oss-20b` based on whether the filename contains `llama`, `qwen`, or `gpt`, tokenizes each `predict` field, prints per-file and aggregate summaries, and writes a combined histogram to `stats/predict_token_distribution.png`. Use `--model` to force the same preset across every file, `--tokenizer-id` in combination with `--model` to override that preset, and `--add-special-tokens` to count the tokenizer's special tokens.
+
 ## Projects using LLaMA Factory
 
 If you have a project that should be incorporated, please contact via email or create a pull request.

@@ -3,7 +3,10 @@
 /*.jsonl
 /data/*.zip
 /scripts/sft/8_infer/*
-/scripts/sft/9_val/*
+/scripts/sft/9_eval/*
+/results/*
+/lm-evaluation-harness/results/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
