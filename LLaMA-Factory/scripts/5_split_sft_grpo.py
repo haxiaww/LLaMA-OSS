@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Split filtered JSONL data into SFT/GRPO train sets and a shared validation set."""
+"""Build step-5 splits: SFT keeps all filtered data, VAL is a stratified slice, GRPO backfills from alpaca."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import math
-import statistics
+import random
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 try:
     from tabulate import tabulate
@@ -26,19 +26,28 @@ except ImportError:  # pragma: no cover - optional dependency
 DATASET_CHOICES = ("gsm8k", "logiqa", "compmath")
 MODE_NAMES = ("high", "medium", "low")
 MODE_OUTPUT_ORDER = ("low", "medium", "high")
-MODE_LABELS = {
-    "low": "low",
-    "medium": "medium",
-    "high": "high",
+MODE_LABELS = {"low": "low", "medium": "medium", "high": "high"}
+
+ALPACA_SOURCES = {
+    "gsm8k": Path("data") / "gsm8k_train_alpaca.jsonl",
+    "logiqa": Path("data") / "logiqa_train_alpaca.jsonl",
+    "compmath": Path("data") / "competition_math_train_alpaca.jsonl",
 }
+
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_INPUT_ROOT = BASE_DIR / "new_dataset" / "4_fbi"
 DEFAULT_OUTPUT_ROOT = BASE_DIR / "new_dataset" / "5_split"
 
+GRPO_MODE_INSTRUCTIONS = {
+    "low": "Respond concisely with minimal reasoning.\n",
+    "medium": "Solve step-by-step.\n",
+    "high": "Think deeply, verify, and self-correct.\n",
+}
+
 
 @dataclass
 class Sample:
-    sample_id: str
+    sample_id: Optional[int]
     mode: str
     line: str
     data: Dict[str, Any]
@@ -50,12 +59,11 @@ class Sample:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Build stage-5 splits where ids appearing in all three modes (high/medium/low) "
-            "feed SFT train, ids in exactly two modes feed GRPO train, and ids in only one "
-            "mode are reserved for the shared validation set."
+            "Send all filtered data to SFT, draw a length-diverse validation slice, "
+            "and populate GRPO with examples missing from the alpaca source."
         )
     )
-    parser.add_argument("dataset", choices=DATASET_CHOICES, help="Dataset name.")
+    parser.add_argument("--dataset", choices=DATASET_CHOICES, help="Dataset name.")
     parser.add_argument(
         "--input-root",
         type=Path,
@@ -82,29 +90,31 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--ratio-sft",
         type=float,
-        default=0.4,
-        help="Target ratio for SFT split (default: 0.5).",
-    )
-    parser.add_argument(
-        "--ratio-grpo",
-        type=float,
-        default=0.4,
-        help="Target ratio for GRPO split (default: 0.45).",
+        default=0.9,
+        help="Target ratio for SFT split (default: 0.9).",
     )
     parser.add_argument(
         "--ratio-val",
         type=float,
         default=0.1,
-        help="Target ratio for validation split (default: 0.05).",
+        help="Target ratio for validation split (default: 0.1).",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed used when breaking ties in stratified sampling (default: 42).",
     )
     return parser.parse_args()
 
 
-def normalize_id(raw_id: Any) -> Optional[str]:
+def normalize_id(raw_id: Any) -> Optional[int]:
     if raw_id is None:
         return None
-    text = str(raw_id).strip()
-    return text or None
+    try:
+        return int(str(raw_id).strip())
+    except (ValueError, TypeError):
+        return None
 
 
 def read_numeric(value: Any) -> Optional[float]:
@@ -145,9 +155,6 @@ def iter_samples(path: Path, mode: str, start_index: int) -> Tuple[List[Sample],
                 continue
 
             sample_id = normalize_id(payload.get("id"))
-            if not sample_id:
-                continue
-
             tokens = read_numeric(payload.get("reasoning_tokens"))
             samples.append(
                 Sample(
@@ -164,248 +171,174 @@ def iter_samples(path: Path, mode: str, start_index: int) -> Tuple[List[Sample],
     return samples, position
 
 
-def collect_samples(files: List[Path]) -> Tuple[Dict[str, List[Sample]], Dict[str, int]]:
-    samples_by_id: Dict[str, List[Sample]] = {}
+def load_samples(files: Sequence[Path], limit: Optional[int]) -> Tuple[List[Sample], Dict[str, int]]:
+    samples: List[Sample] = []
     mode_counts = {mode: 0 for mode in MODE_NAMES}
     position = 0
 
-    for path in files:
+    selected_files = sorted(files)
+    if limit is not None:
+        selected_files = selected_files[:limit]
+
+    for path in selected_files:
         mode = detect_mode(path)
         if mode is None:
             print(f"[WARN] Could not infer mode for {path.name}; skipping.")
             continue
         mode_samples, position = iter_samples(path, mode, position)
         mode_counts[mode] += len(mode_samples)
-        for sample in mode_samples:
-            samples_by_id.setdefault(sample.sample_id, []).append(sample)
+        samples.extend(mode_samples)
 
-    return samples_by_id, mode_counts
-
-
-def categorize_samples(samples_by_id: Dict[str, List[Sample]]) -> Dict[str, Dict[str, List[Sample]]]:
-    buckets: Dict[str, Dict[str, List[Sample]]] = {
-        "sft_train": {},
-        "grpo_train": {},
-        "val": {},
-    }
-    for sample_id, entries in samples_by_id.items():
-        modes = {sample.mode for sample in entries}
-        if len(modes) >= 3:
-            target = "sft_train"
-        elif len(modes) == 2:
-            target = "grpo_train"
-        else:
-            target = "val"
-        buckets[target][sample_id] = sorted(entries, key=lambda sample: sample.position)
-    return buckets
+    return samples, mode_counts
 
 
-def group_samples_by_id(entries: List[Sample]) -> Dict[str, List[Sample]]:
+def reasoning_length(sample: Sample) -> float:
+    if sample.reasoning_tokens is None or not math.isfinite(sample.reasoning_tokens):
+        return float("inf")
+    return float(sample.reasoning_tokens)
+
+
+def shuffle_and_sort(samples: List[Sample], seed: int) -> List[Sample]:
+    randomized = list(samples)
+    random.Random(seed).shuffle(randomized)
+    randomized.sort(key=lambda s: (reasoning_length(s), s.position))
+    return randomized
+
+
+def evenly_spaced_indices(total: int, amount: int) -> List[int]:
+    if amount <= 0:
+        return []
+    if amount >= total:
+        return list(range(total))
+    selected: List[int] = []
+    step = total / amount
+    for k in range(amount):
+        target = (k + 0.5) * step
+        idx = max(0, min(total - 1, int(round(target)) - 1))
+        while idx in selected and idx < total - 1:
+            idx += 1
+        while idx in selected and idx > 0:
+            idx -= 1
+        selected.append(idx)
+    selected = sorted(set(selected))
+    while len(selected) < amount:
+        for idx in range(total):
+            if idx not in selected:
+                selected.append(idx)
+                if len(selected) == amount:
+                    break
+    return sorted(selected)
+
+
+def split_for_validation(
+    samples: List[Sample], val_ratio: float, seed: int
+) -> Tuple[List[Sample], List[Sample], int]:
+    total_samples = len(samples)
+    if total_samples == 0:
+        return [], [], 0
+
+    def sample_group_key(sample: Sample) -> str:
+        if sample.sample_id is not None:
+            return f"id:{sample.sample_id}"
+        return f"pos:{sample.position}"
+
     grouped: Dict[str, List[Sample]] = {}
-    for sample in entries:
-        grouped.setdefault(sample.sample_id, []).append(sample)
-    for sample_id in grouped:
-        grouped[sample_id].sort(key=lambda item: item.position)
+    for sample in samples:
+        grouped.setdefault(sample_group_key(sample), []).append(sample)
+    groups = list(grouped.values())
+    total_groups = len(groups)
+    if total_groups == 0:
+        return [], samples, 0
+
+    val_target_samples = int(round(total_samples * val_ratio))
+    val_group_count = int(round(total_groups * val_ratio))
+    if val_group_count == 0 and val_ratio > 0:
+        val_group_count = 1
+    val_group_count = max(0, min(total_groups, val_group_count))
+    if val_group_count == 0:
+        return [], samples, val_target_samples
+
+    def group_length(group: List[Sample]) -> float:
+        return min(reasoning_length(sample) for sample in group)
+
+    def group_position(group: List[Sample]) -> int:
+        return min(sample.position for sample in group)
+
+    randomized = list(groups)
+    random.Random(seed).shuffle(randomized)
+    randomized.sort(key=lambda group: (group_length(group), group_position(group)))
+    chosen_indices = set(evenly_spaced_indices(len(randomized), val_group_count))
+
+    val_groups = [group for idx, group in enumerate(randomized) if idx in chosen_indices]
+    sft_groups = [group for idx, group in enumerate(randomized) if idx not in chosen_indices]
+    val_samples = [sample for group in val_groups for sample in group]
+    sft_samples = [sample for group in sft_groups for sample in group]
+    return val_samples, sft_samples, val_target_samples
+
+
+def group_by_mode(samples: List[Sample]) -> Dict[str, List[Sample]]:
+    grouped: Dict[str, List[Sample]] = {mode: [] for mode in MODE_OUTPUT_ORDER}
+    for sample in sorted(samples, key=lambda s: s.position):
+        grouped.setdefault(sample.mode, []).append(sample)
     return grouped
 
 
-def _group_reasoning_metric(samples: List[Sample]) -> float:
-    values = [sample.reasoning_tokens for sample in samples if sample.reasoning_tokens is not None]
-    if not values:
-        return float("inf")
-    return statistics.fmean(values)
+def build_records(samples: List[Sample]) -> List[Dict[str, Any]]:
+    records: List[Dict[str, Any]] = []
+    for sample in sorted(samples, key=lambda s: s.position):
+        payload = sample.data or {}
+        reasoning = payload.get("reasoning")
+        prompt = payload.get("prompt")
+        if not isinstance(reasoning, str) or not reasoning.strip():
+            continue
+        if not isinstance(prompt, str) or not prompt.strip():
+            continue
+        record: Dict[str, Any] = {
+            "id": payload.get("id"),
+            "generation_index": payload.get("generation_index"),
+            "prompt": prompt,
+            "predict": payload.get("predict"),
+            "label": payload.get("label"),
+            "reasoning": reasoning,
+            "reasoning_tokens": sample.reasoning_tokens,
+        }
+        records.append(record)
+    return records
 
 
-def _group_order_key(samples: List[Sample], sort_by_reasoning: bool) -> Tuple[float, int]:
-    metric = _group_reasoning_metric(samples) if sort_by_reasoning else float("inf")
-    first_position = min(sample.position for sample in samples)
-    return (metric, first_position)
-
-
-def build_mode_records(
-    groups: Dict[str, List[Sample]], sort_by_reasoning: bool = False
-) -> Dict[str, List[Dict[str, Any]]]:
-    ordered_groups = sorted(
-        groups.items(),
-        key=lambda item: _group_order_key(item[1], sort_by_reasoning),
-    )
-    mode_records: Dict[str, List[Dict[str, Any]]] = {mode: [] for mode in MODE_OUTPUT_ORDER}
-    for _, samples in ordered_groups:
-        for sample in sorted(samples, key=lambda entry: entry.position):
-            mode_label = MODE_LABELS.get(sample.mode)
-            if not mode_label:
-                continue
-            sample_data = sample.data or {}
-            reasoning = sample_data.get("reasoning")
-            if not isinstance(reasoning, str) or not reasoning.strip():
-                continue
-            record: Dict[str, Any] = {
-                "id": sample_data.get("id"),
-                "generation_index": sample_data.get("generation_index"),
-                "prompt": sample_data.get("prompt"),
-                "predict": sample_data.get("predict"),
-                "label": sample_data.get("label"),
-                "reasoning": reasoning,
-                "reasoning_tokens": sample.reasoning_tokens,
-            }
-            mode_records[mode_label].append(record)
-    return mode_records
-
-
-def write_bucket(
-    groups: Dict[str, List[Sample]],
+def write_records_by_mode(
+    grouped: Dict[str, List[Sample]],
     destinations: Dict[str, Path],
     dry_run: bool,
-    sort_by_reasoning: bool = False,
 ) -> Dict[str, int]:
-    mode_records = build_mode_records(groups, sort_by_reasoning=sort_by_reasoning)
     written_counts: Dict[str, int] = {}
     for mode in MODE_OUTPUT_ORDER:
-        records = mode_records.get(mode, [])
+        records = build_records(grouped.get(mode, []))
         written_counts[mode] = len(records)
-        destination = destinations[mode]
+        target = destinations[mode]
         if dry_run:
             continue
         if not records:
-            if destination.exists():
-                destination.unlink()
+            if target.exists():
+                target.unlink()
             continue
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        with destination.open("w", encoding="utf-8") as dst:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open("w", encoding="utf-8") as dst:
             for record in records:
                 dst.write(json.dumps(record, ensure_ascii=False) + "\n")
     return written_counts
 
 
-def summarize_bucket(groups: Dict[str, List[Sample]]) -> Tuple[int, int]:
-    count = len(groups)
-    return count, count
-
-
-def gather_reasoning_values(buckets: Dict[str, Dict[str, List[Sample]]]) -> Dict[str, List[float]]:
+def gather_reasoning_values(grouped: Dict[str, List[Sample]]) -> Dict[str, List[float]]:
     values: Dict[str, List[float]] = {}
-    for name, groups in buckets.items():
-        per_bucket: List[float] = []
-        for samples in groups.values():
-            per_bucket.extend(
-                sample.reasoning_tokens
-                for sample in samples
-                if sample.reasoning_tokens is not None
-            )
-        values[name] = per_bucket
+    for mode, samples in grouped.items():
+        per_mode = [
+            reasoning_length(sample)
+            for sample in samples
+            if sample.reasoning_tokens is not None and math.isfinite(sample.reasoning_tokens)
+        ]
+        values[mode] = per_mode
     return values
-
-
-def normalize_ratios(ratios: Dict[str, float]) -> Dict[str, float]:
-    cleaned = {key: max(0.0, value) for key, value in ratios.items()}
-    total = sum(cleaned.values())
-    if total <= 0:
-        raise ValueError("At least one ratio value must be positive.")
-    return {key: value / total for key, value in cleaned.items()}
-
-
-def compute_target_counts(total: int, ratios: Dict[str, float]) -> Dict[str, int]:
-    if total <= 0:
-        return {key: 0 for key in ratios}
-
-    raw = {key: ratios[key] * total for key in ratios}
-    counts = {key: int(math.floor(value)) for key, value in raw.items()}
-    remainder = total - sum(counts.values())
-    if remainder > 0:
-        # distribute remainder based on largest fractional parts
-        fractional = sorted(
-            raw.items(), key=lambda item: item[1] - math.floor(item[1]), reverse=True
-        )
-        for key, _ in fractional:
-            if remainder <= 0:
-                break
-            counts[key] += 1
-            remainder -= 1
-    elif remainder < 0:
-        # trim counts if rounding exceeded total (shouldn't happen but guard)
-        for key in ratios:
-            if remainder == 0:
-                break
-            reduction = min(counts[key], abs(remainder))
-            counts[key] -= reduction
-            remainder += reduction
-    return counts
-
-
-def _group_sort_key(samples: List[Sample]) -> Tuple[float, int]:
-    values = [sample.reasoning_tokens for sample in samples if sample.reasoning_tokens is not None]
-    avg = statistics.fmean(values) if values else float("inf")
-    position = min(sample.position for sample in samples)
-    return (avg, position)
-
-
-def extract_even_groups(source: Dict[str, List[Sample]], amount: int) -> List[Tuple[str, List[Sample]]]:
-    if amount <= 0 or not source:
-        return []
-    amount = min(amount, len(source))
-    ordered = sorted(source.items(), key=lambda item: _group_sort_key(item[1]))
-    total = len(ordered)
-    selected_indices: List[int] = []
-    for k in range(amount):
-        target = (k + 0.5) / amount * total
-        idx = max(0, min(total - 1, int(round(target - 1))))
-        while idx in selected_indices and idx < total - 1:
-            idx += 1
-        while idx in selected_indices and idx > 0:
-            idx -= 1
-        selected_indices.append(idx)
-    selected_indices = sorted(set(selected_indices))
-    while len(selected_indices) < amount:
-        for idx in range(total):
-            if idx not in selected_indices:
-                selected_indices.append(idx)
-                if len(selected_indices) == amount:
-                    break
-    selected_indices = sorted(selected_indices[:amount])
-    chosen: List[Tuple[str, List[Sample]]] = []
-    for idx in selected_indices:
-        key, samples = ordered[idx]
-        chosen.append((key, samples))
-    for key, _ in chosen:
-        source.pop(key, None)
-    return chosen
-
-
-def rebalance_buckets(
-    buckets: Dict[str, Dict[str, List[Sample]]], target_counts: Dict[str, int]
-) -> List[str]:
-    log_messages: List[str] = []
-
-    for bucket_name in ("val", "grpo_train"):
-        current = len(buckets.get(bucket_name, {}))
-        target = target_counts.get(bucket_name, 0)
-        deficit = target - current
-        if deficit <= 0:
-            continue
-        moved_groups = extract_even_groups(buckets["sft_train"], deficit)
-        if not moved_groups:
-            log_messages.append(
-                f"[WARN] Not enough SFT ids to fill '{bucket_name}' target "
-                f"(needed {deficit}, moved 0)."
-            )
-            continue
-        for sample_id, samples in moved_groups:
-            buckets[bucket_name][sample_id] = samples
-        log_messages.append(
-            f"[INFO] Rebalanced {len(moved_groups)} ids from SFT to {bucket_name}."
-        )
-        remaining_deficit = target - len(buckets[bucket_name])
-        if remaining_deficit > 0:
-            log_messages.append(
-                f"[WARN] Still short {remaining_deficit} ids for '{bucket_name}' target."
-            )
-
-    sft_target = target_counts.get("sft_train", len(buckets["sft_train"]))
-    if len(buckets["sft_train"]) < sft_target:
-        log_messages.append(
-            "[WARN] SFT split below target after rebalancing; consider adjusting ratios."
-        )
-    return log_messages
 
 
 def build_histogram_edges(values: List[float], bins: int = 50) -> List[float]:
@@ -457,31 +390,19 @@ def save_histogram_overlay(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     x_limits = (edges[0], edges[-1])
-    colors = {
-        "sft_train": "#3A7BD5",
-        "grpo_train": "#F4A261",
-        "val": "#2A9D8F",
-    }
+    colors = {"sft_train": "#3A7BD5", "val": "#2A9D8F"}
     fig, ax = plt.subplots(figsize=(8, 4.5))
     plotted = False
-    bin_centers = [
-        (edges[i] + edges[i + 1]) / 2 for i in range(len(edges) - 1)
-    ]
+    bin_centers = [(edges[i] + edges[i + 1]) / 2 for i in range(len(edges) - 1)]
     per_bucket_peaks: Dict[str, int] = {}
-    for bucket_name in ("sft_train", "grpo_train", "val"):
+
+    for bucket_name, color in colors.items():
         values = reasoning_values.get(bucket_name, [])
         if not values:
             continue
         counts = histogram_counts(values, edges)
         per_bucket_peaks[bucket_name] = max(counts) if counts else 0
-        ax.step(
-            bin_centers,
-            counts,
-            where="mid",
-            label=bucket_name,
-            color=colors.get(bucket_name, "#555555"),
-            linewidth=2,
-        )
+        ax.step(bin_centers, counts, where="mid", label=bucket_name, color=color, linewidth=2)
         plotted = True
 
     if not plotted:
@@ -518,28 +439,18 @@ def save_cdf_plot(
         xmax = xmin + 1.0
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    colors = {
-        "sft_train": "#3A7BD5",
-        "grpo_train": "#F4A261",
-        "val": "#2A9D8F",
-    }
+    colors = {"sft_train": "#3A7BD5", "val": "#2A9D8F"}
     fig, ax = plt.subplots(figsize=(8, 4.5))
     plotted = False
 
-    for bucket_name in ("sft_train", "grpo_train", "val"):
+    for bucket_name, color in colors.items():
         values = reasoning_values.get(bucket_name, [])
         if not values:
             continue
         sorted_vals = sorted(values)
         n = len(sorted_vals)
         ys = [(idx + 1) / n for idx in range(n)]
-        ax.plot(
-            sorted_vals,
-            ys,
-            label=bucket_name,
-            color=colors.get(bucket_name, "#555555"),
-            linewidth=2,
-        )
+        ax.plot(sorted_vals, ys, label=bucket_name, color=color, linewidth=2)
         plotted = True
 
     if not plotted:
@@ -560,6 +471,67 @@ def save_cdf_plot(
     return path
 
 
+def normalize_ratios(ratios: Dict[str, float]) -> Dict[str, float]:
+    cleaned = {key: max(0.0, value) for key, value in ratios.items()}
+    total = sum(cleaned.values())
+    if total <= 0:
+        raise ValueError("At least one ratio value must be positive.")
+    return {key: value / total for key, value in cleaned.items()}
+
+
+def build_grpo_records_from_alpaca(
+    dataset: str, seen_ids: Sequence[int]
+) -> Tuple[List[Dict[str, Any]], Path]:
+    source = ALPACA_SOURCES.get(dataset)
+    if source is None:
+        raise ValueError(f"No alpaca source registered for dataset '{dataset}'.")
+    seen = set(seen_ids)
+    records: List[Dict[str, Any]] = []
+    with source.open("r", encoding="utf-8") as src:
+        for idx, raw_line in enumerate(src):
+            if idx in seen:
+                continue
+            try:
+                payload = json.loads(raw_line)
+            except json.JSONDecodeError:
+                continue
+            prompt = payload.get("prompt")
+            response = payload.get("response")
+            if not isinstance(prompt, str) or not prompt.strip():
+                continue
+            if not isinstance(response, str) or not response.strip():
+                continue
+            response_clean = response.strip()
+            prompt_clean = prompt.strip()
+            base_record = {
+                "id": idx,
+                "prompt": prompt_clean,
+                "predict": "",
+                "label": response_clean,
+            }
+            for mode, instruction in GRPO_MODE_INSTRUCTIONS.items():
+                mode_instruction = instruction.strip()
+                record = dict(base_record)
+                record["mode"] = mode
+                if mode_instruction:
+                    record["instruction"] = mode_instruction
+                records.append(record)
+    return records, source
+
+
+def write_grpo_records(records: List[Dict[str, Any]], path: Path, dry_run: bool) -> None:
+    if dry_run:
+        return
+    if not records:
+        if path.exists():
+            path.unlink()
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as dst:
+        for record in records:
+            dst.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
 def process_dataset(
     dataset: str,
     input_root: Path,
@@ -567,6 +539,7 @@ def process_dataset(
     limit: Optional[int],
     dry_run: bool,
     ratios: Dict[str, float],
+    seed: int,
 ) -> None:
     input_dir = input_root / dataset
     if not input_dir.is_dir():
@@ -579,98 +552,86 @@ def process_dataset(
         print(f"[{dataset}] No JSONL files detected under {input_dir}.")
         return
 
-    samples_by_id, mode_counts = collect_samples(files)
-    if not samples_by_id:
+    samples, mode_counts = load_samples(files, limit=None)
+    if not samples:
         print(f"[{dataset}] No valid samples collected from {len(files)} files.")
         return
 
-    buckets = categorize_samples(samples_by_id)
-    normalized_ratios = normalize_ratios(ratios)
-    total_ids = len(samples_by_id)
-    target_counts = compute_target_counts(total_ids, normalized_ratios)
-    rebalance_logs = rebalance_buckets(buckets, target_counts)
+    seen_ids = [sample.sample_id for sample in samples if sample.sample_id is not None]
+    usable_samples = [
+        sample
+        for sample in samples
+        if isinstance(sample.data.get("reasoning"), str)
+        and sample.data.get("reasoning").strip()
+        and isinstance(sample.data.get("prompt"), str)
+        and sample.data.get("prompt").strip()
+    ]
+
+    normalized_ratios = normalize_ratios({"sft_train": ratios["sft_train"], "val": ratios["val"]})
+    val_samples, sft_samples, val_target = split_for_validation(
+        usable_samples, val_ratio=normalized_ratios["val"], seed=seed
+    )
 
     output_dir = output_root / dataset
     output_dir.mkdir(parents=True, exist_ok=True)
     plot_dir = output_dir / "plots"
     outputs = {
-        split: {
-            mode: output_dir / f"{dataset}_{split}_{mode}.jsonl"
-            for mode in MODE_OUTPUT_ORDER
-        }
-        for split in ("sft_train", "grpo_train", "val")
+        "sft_train": {mode: output_dir / f"{dataset}_sft_train_{mode}.jsonl" for mode in MODE_OUTPUT_ORDER},
+        "val": {mode: output_dir / f"{dataset}_val_{mode}.jsonl" for mode in MODE_OUTPUT_ORDER},
     }
 
-    print(f"[{dataset}] Mode counts: " + ", ".join(f"{mode}={count}" for mode, count in mode_counts.items()))
-    for message in rebalance_logs:
-        print(message)
+    grouped_sft = group_by_mode(sft_samples)
+    grouped_val = group_by_mode(val_samples)
 
-    bucket_record_counts: Dict[str, int] = {}
-    bucket_id_stats: Dict[str, int] = {}
+    print(f"[{dataset}] Mode counts (input): " + ", ".join(f"{mode}={count}" for mode, count in mode_counts.items()))
+    print(
+        f"[{dataset}] Selected {len(val_samples)} validation samples "
+        f"({val_target} target, {len(usable_samples)} usable, {len(samples)} total)."
+    )
+
+    sft_written = write_records_by_mode(grouped_sft, outputs["sft_train"], dry_run=dry_run)
+    val_written = write_records_by_mode(grouped_val, outputs["val"], dry_run=dry_run)
+
     per_bucket_rows: List[List[Any]] = []
-    for bucket_name, groups in buckets.items():
-        record_count, id_total = summarize_bucket(groups)
-        sort_by_reasoning = bucket_name == "sft_train"
-        written_counts = write_bucket(
-            groups,
-            outputs[bucket_name],
-            dry_run=dry_run,
-            sort_by_reasoning=sort_by_reasoning,
-        )
-        bucket_record_counts[bucket_name] = record_count
-        bucket_id_stats[bucket_name] = id_total
+    total_records = sum(sft_written.values()) + sum(val_written.values())
+    for split_name, counts in (("sft_train", sft_written), ("val", val_written)):
+        split_total = sum(counts.values())
         per_bucket_rows.append(
             [
-                bucket_name,
-                record_count,
-                id_total,
-                "0.00%",
+                split_name,
+                split_total,
+                f"{(split_total / total_records * 100):.2f}%" if total_records else "0.00%",
+                ", ".join(f"{mode}:{counts.get(mode,0)}" for mode in MODE_OUTPUT_ORDER),
             ]
         )
-        total_entries_written = sum(written_counts.values())
-        destinations = ", ".join(
-            f"{mode}:{outputs[bucket_name][mode]}"
-            for mode in MODE_OUTPUT_ORDER
-        )
+        dests = ", ".join(f"{mode}:{outputs[split_name][mode]}" for mode in MODE_OUTPUT_ORDER)
         print(
-            f"  - {bucket_name}: ids={id_total} samples={record_count} "
-            f"entries={total_entries_written} -> {destinations if not dry_run else '(dry run)'}"
+            f"  - {split_name}: samples={split_total} -> "
+            f"{dests if not dry_run else '(dry run)'}"
         )
 
-    total_records = sum(bucket_record_counts.values())
-    if total_records:
-        for row in per_bucket_rows:
-            name = row[0]
-            count = bucket_record_counts.get(name, 0)
-            row[3] = f"{(count / total_records * 100):.2f}%"
-
-        headers = ["Split", "Samples", "Unique IDs", "Ratio"]
+    if per_bucket_rows:
+        headers = ["Split", "Samples", "Ratio", "Per-mode counts"]
         print(f"[{dataset}] Split summary:")
         print(tabulate(per_bucket_rows, headers=headers, tablefmt="grid"))
 
-        print(f"[{dataset}] Bucket ratios (by sample count):")
-        for bucket_name in ("sft_train", "grpo_train", "val"):
-            count = bucket_record_counts.get(bucket_name, 0)
-            ratio = (count / total_records * 100) if total_records else 0.0
-            target = target_counts.get(bucket_name, 0)
-            target_ratio = (target / total_ids * 100) if total_ids else 0.0
-            print(
-                f"  {bucket_name}: {count} samples ({ratio:.2f}% of {total_records}) "
-                f"| target {target} ({target_ratio:.2f}%)"
-            )
-
-    reasoning_values = gather_reasoning_values(buckets)
+    reasoning_values = {
+        "sft_train": [
+            reasoning_length(sample)
+            for sample in sft_samples
+            if sample.reasoning_tokens is not None and math.isfinite(sample.reasoning_tokens)
+        ],
+        "val": [
+            reasoning_length(sample)
+            for sample in val_samples
+            if sample.reasoning_tokens is not None and math.isfinite(sample.reasoning_tokens)
+        ],
+    }
     combined_values = [value for values in reasoning_values.values() for value in values]
     if combined_values:
         edges = build_histogram_edges(combined_values)
-        counts = histogram_counts(combined_values, edges)
-        peak = max(counts) if counts else 0
-        y_limit = peak * 1.05 if peak else 1.0
         plot_path = save_histogram_overlay(
-            dataset=dataset,
-            reasoning_values=reasoning_values,
-            edges=edges,
-            output_dir=plot_dir,
+            dataset=dataset, reasoning_values=reasoning_values, edges=edges, output_dir=plot_dir
         )
         cdf_path = save_cdf_plot(
             dataset=dataset,
@@ -685,12 +646,14 @@ def process_dataset(
     else:
         print(f"[{dataset}] No reasoning_tokens values available; skipping histograms.")
 
+    grpo_records, alpaca_source = build_grpo_records_from_alpaca(dataset, seen_ids=seen_ids)
+    grpo_path = output_dir / f"{dataset}_grpo_train.jsonl"
+    write_grpo_records(grpo_records, grpo_path, dry_run=dry_run)
     print(
-        f"[{dataset}] Completed split: "
-        f"SFT ids={bucket_id_stats.get('sft_train', 0)}, "
-        f"GRPO ids={bucket_id_stats.get('grpo_train', 0)}, "
-        f"VAL ids={bucket_id_stats.get('val', 0)}"
+        f"[{dataset}] GRPO backfill: {len(grpo_records)} missing ids from {alpaca_source} "
+        f"-> {grpo_path if not dry_run else '(dry run)'}"
     )
+
     if dry_run:
         print("[INFO] Dry run mode; no files were written.")
 
@@ -703,11 +666,8 @@ def main() -> None:
         output_root=args.output_root,
         limit=args.limit,
         dry_run=args.dry_run,
-        ratios={
-            "sft_train": args.ratio_sft,
-            "grpo_train": args.ratio_grpo,
-            "val": args.ratio_val,
-        },
+        ratios={"sft_train": args.ratio_sft, "val": args.ratio_val},
+        seed=args.seed,
     )
 
 

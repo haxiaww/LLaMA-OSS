@@ -1,0 +1,14 @@
+### Note: DO NOT use quantized model or quantization_bit when merging lora adapters
+# llamafactory-cli export examples/merge_lora/llama_merge_pharse1.yaml
+
+### model
+model_name_or_path: meta-llama/Llama-3.2-1B-Instruct
+adapter_name_or_path: saves/llama_phrase1
+template: llama3
+trust_remote_code: true
+
+### export
+export_dir: output/llama_phrase1
+export_size: 5
+export_device: cpu  # choices: [cpu, auto]
+export_legacy_format: false

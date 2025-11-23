@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 DATASET_CHOICES = ("gsm8k", "logiqa", "compmath")
 
 BASE_DIR = Path(__file__).resolve().parent
-DEFAULT_INPUT_ROOT = BASE_DIR / "new_dataset" / "3_fbd"
+DEFAULT_INPUT_ROOT = BASE_DIR / "new_dataset" / "3_fbt"
 DEFAULT_OUTPUT_ROOT = BASE_DIR / "new_dataset" / "4_fbi"
 DEFAULT_OUTPUT_SUFFIX = "_byid"
 

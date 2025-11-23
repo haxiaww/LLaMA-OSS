@@ -3,7 +3,7 @@
 
 ### model
 model_name_or_path: meta-llama/Llama-3.2-3B-Instruct
-adapter_name_or_path: saves/llama3_2_3b_sft_concat_sorted/checkpoint-3592
+adapter_name_or_path: /home/khoina/LLaMA-OSS/LLaMA-Factory/saves/llama_sorted
 template: llama3
 trust_remote_code: true
 

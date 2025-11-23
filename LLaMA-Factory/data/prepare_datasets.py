@@ -44,7 +44,7 @@ def build_prompt_gsm8k(question: str) -> str:
 def process_gsm8k(outdir: str):
     print("[GSM8K] Loading openai/gsm8k ...")
     ds = load_dataset("openai/gsm8k", 'main')
-    for split in ("train", "test"):
+    for split in ("train",):
         if split not in ds:
             continue
         rows = []
@@ -120,7 +120,7 @@ def load_logiqa_dataset():
 def process_logiqa(outdir: str):
     print("[LogiQA] Loading lucasmccabe/logiqa ...")
     ds = load_logiqa_dataset()
-    for split in ("train", "validation", "test"):
+    for split in ("train",):
         if split not in ds:
             continue
         rows = []
@@ -156,9 +156,9 @@ def build_prompt_compmath(problem: str) -> str:
 
 
 def process_competition_math(outdir: str):
-    print("[CompetitionMath] Loading qwedsacf/competition_math ...")
-    ds = load_dataset("qwedsacf/competition_math")
-    for split in ("train", "validation", "test"):
+    print("[CompetitionMath] Loading DigitalLearningGmbH/MATH-lighteval")
+    ds = load_dataset("DigitalLearningGmbH/MATH-lighteval")
+    for split in ("train",):
         if split not in ds:
             continue
         rows = []
@@ -190,7 +190,7 @@ def main():
     parser.add_argument("--outdir", type=str, default="data", help="Output folder for JSONL files.")
     parser.add_argument("--gsm8k", action="store_true", help="Process GSM8K (openai/gsm8k).")
     parser.add_argument("--logiqa", action="store_true", help="Process LogiQA (lucasmccabe/logiqa).")
-    parser.add_argument("--comp-math", action="store_true", help="Process Competition Math (qwedsacf/competition_math).")
+    parser.add_argument("--comp-math", action="store_true", help="Process Competition Math (DigitalLearningGmbH/MATH-lighteval).")
     parser.add_argument("--all", action="store_true", help="Process all datasets.")
     args = parser.parse_args()
 

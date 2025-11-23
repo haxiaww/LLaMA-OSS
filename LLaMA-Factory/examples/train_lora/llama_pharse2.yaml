@@ -1,0 +1,63 @@
+### model
+model_name_or_path: meta-llama/Llama-3.2-1B-Instruct
+adapter_name_or_path: saves/llama_phrase1
+# trust_remote_code: true
+
+### method
+stage: sft
+do_train: true
+finetuning_type: lora
+create_new_adapter: false  # continue train on the previous adapter (from phrase 1)
+lora_rank: 32
+lora_alpha: 64
+lora_target: all
+lora_dropout: 0.05
+# use_dora: true  # better performance but increse 1.67x in training time
+
+### dataset
+dataset: sft_low,sft_medium,sft_high
+mix_strategy: interleave_over
+interleave_probs: 0.2,0.5,0.3
+packing: true
+template: llama3
+cutoff_len: 5120  # 1024 + 4096 (max reasoning for high)
+max_samples: 1000000
+overwrite_cache: true
+preprocessing_num_workers: 16
+dataloader_num_workers: 4
+
+### output
+output_dir: saves/llama_phrase2_2
+logging_steps: 5
+save_steps: 20
+plot_loss: true
+overwrite_output_dir: false
+save_only_model: false
+report_to: wandb  # choices: [none, wandb, tensorboard, swanlab, mlflow]
+run_name: llama_phrase2_2
+
+### accelerator
+flash_attn: fa2
+enable_liger_kernel: true
+use_unsloth_gc: true
+
+### train
+seed: 43
+per_device_train_batch_size: 16  # global batch size = 32
+gradient_accumulation_steps: 2
+learning_rate: 1.0e-4  # descrease 2 times compared to phrase 1
+num_train_epochs: 1.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.1
+bf16: true
+ddp_timeout: 180000000
+resume_from_checkpoint: null
+
+### eval
+eval_dataset: sft_grpo_val_low,sft_grpo_val_medium,sft_grpo_val_high
+per_device_eval_batch_size: 2
+eval_strategy: steps
+eval_steps: 20
+metric_for_best_model: eval_sft_grpo_val_high_loss
+load_best_model_at_end: true
+eval_on_each_dataset: true

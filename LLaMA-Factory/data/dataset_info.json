@@ -50,11 +50,13 @@
     }
   },
 
+
   "sft_low": {
     "file_name": "combined_sft_train_low.jsonl",
     "formatting": "alpaca",
     "columns": {
-      "prompt": "prompt",
+      "system": "instruction",  
+      "query": "prompt",       
       "response": "response"
     }
   },
@@ -63,7 +65,8 @@
     "file_name": "combined_sft_train_medium.jsonl",
     "formatting": "alpaca",
     "columns": {
-      "prompt": "prompt",
+      "system": "instruction",  
+      "query": "prompt",       
       "response": "response"
     }
   },
@@ -72,16 +75,38 @@
     "file_name": "combined_sft_train_high.jsonl",
     "formatting": "alpaca",
     "columns": {
-      "prompt": "prompt",
+      "system": "instruction",  
+      "query": "prompt",       
       "response": "response"
     }
   },
 
-  "sft_grpo_val": {
-    "file_name": "combined_val.jsonl",
+  "sft_grpo_val_low": {
+    "file_name": "combined_val_low.jsonl",
     "formatting": "alpaca",
     "columns": {
-      "prompt": "prompt",
+      "system": "instruction",  
+      "query": "prompt",       
+      "response": "response"
+    }
+  },
+
+  "sft_grpo_val_medium": {
+    "file_name": "combined_val_medium.jsonl",
+    "formatting": "alpaca",
+    "columns": {
+      "system": "instruction",  
+      "query": "prompt",       
+      "response": "response"
+    }
+  },
+
+  "sft_grpo_val_high": {
+    "file_name": "combined_val_high.jsonl",
+    "formatting": "alpaca",
+    "columns": {
+      "system": "instruction",  
+      "query": "prompt",       
       "response": "response"
     }
   }

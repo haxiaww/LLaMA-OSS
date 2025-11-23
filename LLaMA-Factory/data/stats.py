@@ -8,7 +8,7 @@ import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Sequence
+from typing import List, Mapping, Sequence
 
 DATA_DIR = Path(__file__).resolve().parent
 DEFAULT_FILES = [
@@ -115,7 +115,60 @@ def parse_args() -> argparse.Namespace:
         nargs="*",
         help="Relative or absolute paths to JSONL datasets (default: combined SFT splits).",
     )
+    parser.add_argument(
+        "--plot-output",
+        type=Path,
+        help="Optional path to save the histogram; default is data/reasoning_token_distribution.png.",
+    )
+    parser.add_argument(
+        "--plot-bins",
+        type=int,
+        default=50,
+        help="Number of histogram bins when plotting.",
+    )
+    parser.add_argument(
+        "--no-plot",
+        action="store_true",
+        help="Skip saving the histogram (default is to plot).",
+    )
     return parser.parse_args()
+
+
+def plot_distributions(
+    distributions: Mapping[str, Sequence[float]],
+    output_path: Path,
+    bins: int = 50,
+) -> None:
+    """Write a combined histogram plot for the supplied distributions."""
+    if bins <= 0:
+        raise ValueError("Histogram bins must be positive.")
+    non_empty = {label: values for label, values in distributions.items() if values}
+    if not non_empty:
+        print("[WARN] No reasoning_token values to plot.")
+        return
+    import matplotlib.pyplot as plt
+
+    plt.figure(figsize=(10, 6))
+    for label, values in sorted(non_empty.items()):
+        plt.hist(
+            values,
+            bins=bins,
+            density=True,
+            alpha=0.45,
+            label=label,
+            histtype="stepfilled",
+            edgecolor="black",
+        )
+    plt.xlabel("reasoning_tokens")
+    plt.ylabel("Density")
+    plt.title("Reasoning token distribution")
+    plt.grid(True, linestyle=":", alpha=0.5)
+    plt.legend(title="Dataset")
+    plt.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_path)
+    plt.close()
+    print(f"Saved reasoning_token distribution to {output_path}")
 
 
 def main() -> None:
@@ -123,6 +176,7 @@ def main() -> None:
     file_args = args.files or DEFAULT_FILES
     all_values: List[float] = []
     combined_missing = 0
+    distributions: dict[str, List[float]] = {}
 
     for file_arg in file_args:
         path = Path(file_arg)
@@ -133,12 +187,17 @@ def main() -> None:
         values, missing = load_reasoning_tokens(path)
         combined_missing += missing
         all_values.extend(values)
+        distributions[path.name] = values
         stats = compute_stats(values, missing)
         print(format_stats(path.name, stats))
 
     print("-" * 120)
     combined_stats = compute_stats(all_values, combined_missing)
     print(format_stats("combined", combined_stats))
+    plot_output = None
+    if not args.no_plot:
+        plot_output = args.plot_output or (DATA_DIR / "reasoning_token_distribution.png")
+        plot_distributions(distributions, plot_output, args.plot_bins)
 
 
 if __name__ == "__main__":

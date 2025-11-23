@@ -72,7 +72,9 @@ def clean_prompt(prompt: str) -> str:
     return " ".join(text.split())
 
 
-def build_training_entry(record: Dict[str, object], mode: str) -> Optional[Tuple[Dict[str, str], int]]:
+def build_training_entry(
+    record: Dict[str, object], mode: str, split: str
+) -> Optional[Tuple[Dict[str, object], int]]:
     prompt_raw = record.get("prompt")
     if not isinstance(prompt_raw, str) or not prompt_raw.strip():
         return None
@@ -80,7 +82,10 @@ def build_training_entry(record: Dict[str, object], mode: str) -> Optional[Tuple
     predict = record.get("predict") if isinstance(record.get("predict"), str) else ""
     reasoning = record.get("reasoning")
     if not isinstance(reasoning, str) or not reasoning.strip():
-        return None
+        if split == "grpo_train":
+            reasoning = record.get("label")
+        if not isinstance(reasoning, str) or not reasoning.strip():
+            return None
     reasoning_clean = reasoning.strip()
     response = f"<think>{reasoning_clean}</think> {predict}".strip()
     reasoning_tokens_raw = record.get("reasoning_tokens")
@@ -88,27 +93,43 @@ def build_training_entry(record: Dict[str, object], mode: str) -> Optional[Tuple
         length = int(reasoning_tokens_raw)
     else:
         length = len(reasoning_clean.split())
-    return (
-        {
-            "prompt": prompt,
-            "response": response,
-            "mode": mode,
-            "reasoning_tokens": length,
-        },
-        length,
-    )
+    record_mode_raw = record.get("mode")
+    if isinstance(record_mode_raw, str) and record_mode_raw.strip():
+        normalized_mode = record_mode_raw.strip().lower()
+    else:
+        normalized_mode = mode
+    if normalized_mode not in MODE_NAMES and normalized_mode != "grpo":
+        normalized_mode = mode
+    entry: Dict[str, object] = {
+        "prompt": prompt,
+        "response": response,
+        "mode": normalized_mode,
+    }
+    if split != "grpo_train":
+        entry["reasoning_tokens"] = length
+    instruction = record.get("instruction")
+    if isinstance(instruction, str) and instruction.strip():
+        entry["instruction"] = instruction.strip()
+    label_value = record.get("label")
+    if isinstance(label_value, str) and label_value.strip():
+        entry["label"] = label_value.strip()
+    return entry, length
 
 
 def derive_paths(
-    dataset: str, split: str, mode: str, input_root: Path, output_root: Path
+    dataset: str, split: str, mode: Optional[str], input_root: Path, output_root: Path
 ) -> Tuple[Path, Path]:
-    input_path = input_root / dataset / f"{dataset}_{split}_{mode}.jsonl"
-    output_path = output_root / dataset / f"{dataset}_{split}_{mode}_think.jsonl"
+    if split == "grpo_train":
+        input_path = input_root / dataset / f"{dataset}_{split}.jsonl"
+        output_path = output_root / dataset / f"{dataset}_{split}_think.jsonl"
+    else:
+        input_path = input_root / dataset / f"{dataset}_{split}_{mode}.jsonl"
+        output_path = output_root / dataset / f"{dataset}_{split}_{mode}_think.jsonl"
     return input_path, output_path
 
 
 def process_file(
-    input_path: Path, output_path: Path, mode: str, dry_run: bool
+    input_path: Path, output_path: Path, split: str, mode: str, dry_run: bool
 ) -> Tuple[int, int, List[int]]:
     if not input_path.is_file():
         print(f"[WARN] Missing input file: {input_path}")
@@ -136,7 +157,7 @@ def process_file(
             except json.JSONDecodeError:
                 continue
 
-            built = build_training_entry(record, mode=mode)
+            built = build_training_entry(record, mode=mode, split=split)
             if built is None:
                 continue
             entry, length = built
@@ -177,26 +198,30 @@ def process_dataset(
     split_record_counts = {split: 0 for split in SPLIT_NAMES}
     split_entry_counts = {split: 0 for split in SPLIT_NAMES}
 
-    for split in SPLIT_NAMES:
-        for mode in MODE_NAMES:
-            input_path, output_path = derive_paths(dataset, split, mode, input_root, output_root)
-            records, entries, lengths = process_file(
-                input_path, output_path, mode=mode, dry_run=dry_run
-            )
-            split_record_counts[split] += records
-            split_entry_counts[split] += entries
-            mode_rows.append([split, mode, entries])
-            reasoning_stats[(split, mode)] = lengths
-            path_rows.append(
-                [
-                    split,
-                    mode,
-                    str(input_path),
-                    str(output_path) if not dry_run else "(dry run)",
-                ]
-            )
-            total_records += records
-            total_entries += entries
+    tasks: List[Tuple[str, Optional[str]]] = []
+    for split in ("sft_train", "val"):
+        tasks.extend((split, mode) for mode in MODE_NAMES)
+    tasks.append(("grpo_train", "grpo"))
+
+    for split, mode in tasks:
+        input_path, output_path = derive_paths(dataset, split, mode, input_root, output_root)
+        records, entries, lengths = process_file(
+            input_path, output_path, split=split, mode=mode or "grpo", dry_run=dry_run
+        )
+        split_record_counts[split] += records
+        split_entry_counts[split] += entries
+        mode_rows.append([split, mode, entries])
+        reasoning_stats[(split, mode or "grpo")] = lengths
+        path_rows.append(
+            [
+                split,
+                mode,
+                str(input_path),
+                str(output_path) if not dry_run else "(dry run)",
+            ]
+        )
+        total_records += records
+        total_entries += entries
 
     for split in SPLIT_NAMES:
         rows.append(
@@ -245,7 +270,8 @@ def save_reasoning_plots(
     plot_dir = output_dir / "reasoning_plots"
     plot_dir.mkdir(parents=True, exist_ok=True)
     for split in SPLIT_NAMES:
-        for mode in MODE_NAMES:
+        split_modes = {mode for (split_key, mode) in stats.keys() if split_key == split}
+        for mode in sorted(split_modes):
             lengths = stats.get((split, mode), [])
             if not lengths:
                 continue
