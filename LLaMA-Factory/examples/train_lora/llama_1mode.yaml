@@ -54,6 +54,6 @@ eval_dataset: sft_grpo_val_medium
 per_device_eval_batch_size: 4
 eval_strategy: steps
 eval_steps: 40
-metric_for_best_model: eval_loss
+metric_for_best_model: eval_sft_grpo_val_medium_loss
 load_best_model_at_end: true
 eval_on_each_dataset: true
