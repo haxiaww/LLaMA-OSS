@@ -2,11 +2,11 @@ CUDA_VISIBLE_DEVICES=0 python3 scripts/vllm_infer.py \
     --model_name_or_path output/llama_sft_3mode \
     --dataset sft_grpo_val_medium \
     --template llama3 \
-    --batch_size 2048 \
+    --batch_size 4096 \
     --default_system "" \
-    --cutoff_len 1024 \
-    --max_new_tokens 8096 \
+    --cutoff_len 2048 \
+    --max_new_tokens 4096 \
     --seed 42 \
-    --vllm_config '{"gpu_memory_utilization": 0.95, "max_model_len": 4096, "max_num_batched_tokens": 10240}' \
+    --vllm_config '{"gpu_memory_utilization": 0.95, "max_model_len": 6144, "max_num_batched_tokens": 20480}' \
     --save_name scripts/sft/8_infer/llama_sft_3mode.jsonl \
     --temperature 1.0 \

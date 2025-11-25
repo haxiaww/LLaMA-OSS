@@ -12,4 +12,4 @@ export_dir: output/llama_sft_1mode
 export_size: 5
 export_device: cpu  # choices: [cpu, auto]
 export_legacy_format: false
-export_hub_model_id: KoiiVN/LLAMA-OSS
+export_hub_model_id: KoiiVN/llama_sft_1mode
