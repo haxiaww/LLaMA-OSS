@@ -1,0 +1,59 @@
+### model
+model_name_or_path: Qwen/Qwen2.5-1.5B-Instruct
+# trust_remote_code: true
+
+### method
+stage: sft
+do_train: true
+finetuning_type: lora
+lora_rank: 32
+lora_alpha: 64
+lora_target: all
+lora_dropout: 0.05
+# use_dora: true  # better performance but increse 1.67x in training time
+
+### dataset
+dataset: sft_low,sft_medium,sft_high
+packing: true
+template: qwen
+cutoff_len: 3072  # 1024 + 2048 (max reasoning for high)
+# max_samples: 1000000
+overwrite_cache: true
+preprocessing_num_workers: 16
+dataloader_num_workers: 4
+
+### output
+output_dir: saves/qwen_sft_3mode
+logging_steps: 5
+save_steps: 40
+plot_loss: true
+overwrite_output_dir: false
+save_only_model: false
+report_to: wandb  # choices: [none, wandb, tensorboard, swanlab, mlflow]
+run_name: qwen_sft_3mode
+
+### accelerator
+flash_attn: fa2
+enable_liger_kernel: true
+use_unsloth_gc: true
+
+### train
+seed: 42
+per_device_train_batch_size: 16  # global batch size = 32
+gradient_accumulation_steps: 2
+learning_rate: 2.0e-4
+num_train_epochs: 1.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.1
+bf16: true
+ddp_timeout: 180000000
+resume_from_checkpoint: null
+
+### eval
+eval_dataset: sft_grpo_val_medium
+per_device_eval_batch_size: 4
+eval_strategy: steps
+eval_steps: 40
+metric_for_best_model: eval_loss
+load_best_model_at_end: true
+eval_on_each_dataset: true
