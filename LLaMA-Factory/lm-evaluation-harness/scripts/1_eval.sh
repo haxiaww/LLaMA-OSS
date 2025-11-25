@@ -31,7 +31,7 @@ esac
 # Output paths
 mkdir -p results
 timestamp="$(date +%Y%m%d-%H%M%S)"
-out_json="results/${task}_${name}_8096_10240.json"
+out_json="results/${task}_${name}_4096_6144.json"
 
 echo "Evaluating model: ${pretrained_in}"
 echo "Task: ${task}"
@@ -40,10 +40,10 @@ echo "Output: ${out_json}"
 
 CUDA_VISIBLE_DEVICES="${device}" lm_eval \
   --model vllm \
-  --model_args "pretrained=${pretrained_in},tensor_parallel_size=1,dtype=bfloat16,max_model_len=10240,gpu_memory_utilization=0.9,trust_remote_code=True" \
+  --model_args "pretrained=${pretrained_in},tensor_parallel_size=1,dtype=bfloat16,max_model_len=6144,gpu_memory_utilization=0.9,trust_remote_code=True" \
   --tasks "${task}" \
   --batch_size auto \
-  --gen_kwargs "max_gen_toks=8096" \
+  --gen_kwargs "max_gen_toks=4096" \
   --output_path "${out_json}" \
   --log_samples \
   --verbosity DEBUG \
