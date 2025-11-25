@@ -455,18 +455,15 @@ class ModeAdaptiveReward:
         if mode not in ['low', 'medium', 'high']:
             mode = 'medium'
         
-        # Check correctness first
         pred = self.extract_answer(gen)
         is_correct = self.normalize(pred) == self.normalize(self.extract_answer(gt))
         
-        # If wrong answer, return very low reward
         if not is_correct:
-            return -1.0  # Strong penalty for wrong answers
+            return -1.0  
         
-        # Only reward style if answer is correct
-        reward = 5.0  # High base reward for correctness
+        reward = 5.0
         
-        # Format bonus (small)
+        # Format bonus
         if '<think>' in gen and '</think>' in gen:
             reward += 0.2
         if pred:
