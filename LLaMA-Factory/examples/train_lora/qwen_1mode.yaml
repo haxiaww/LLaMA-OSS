@@ -1,5 +1,5 @@
 ### model
-model_name_or_path: Qwen/Qwen2.5-1.5B-Instruct
+model_name_or_path: Qwen/Qwen2.5-3B-Instruct
 # trust_remote_code: true
 
 ### method
@@ -23,14 +23,14 @@ preprocessing_num_workers: 16
 dataloader_num_workers: 4
 
 ### output
-output_dir: saves/qwen_sft_1mode
+output_dir: saves/qwen_3b_sft_1mode
 logging_steps: 5
 save_steps: 40
 plot_loss: true
 overwrite_output_dir: false
 save_only_model: false
 report_to: wandb  # choices: [none, wandb, tensorboard, swanlab, mlflow]
-run_name: qwen_sft_1mode
+run_name: qwen_3b_sft_1mode
 
 ### accelerator
 flash_attn: fa2
@@ -54,6 +54,6 @@ eval_dataset: sft_grpo_val_medium
 per_device_eval_batch_size: 4
 eval_strategy: steps
 eval_steps: 40
-metric_for_best_model: eval_loss
+metric_for_best_model: eval_sft_grpo_val_medium_loss
 load_best_model_at_end: true
 eval_on_each_dataset: true

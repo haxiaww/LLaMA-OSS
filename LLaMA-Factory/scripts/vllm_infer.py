@@ -14,10 +14,14 @@
 
 import gc
 import json
+import os
+import random
 from typing import Optional
 
 import av
 import fire
+import numpy as np
+import torch
 from tqdm import tqdm
 from transformers import Seq2SeqTrainingArguments
 
@@ -40,6 +44,24 @@ def _need_video_kwargs(template):
         return True
 
     return False
+
+
+def _seed_everything(seed: Optional[int]) -> None:
+    r"""Seed common random number generators for reproducible inference."""
+    if seed is None:
+        return
+
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+    if hasattr(torch.backends, "cudnn"):
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
 
 def vllm_infer(
@@ -74,6 +96,8 @@ def vllm_infer(
     """
     if pipeline_parallel_size > get_device_count():
         raise ValueError("Pipeline parallel size should be smaller than the number of gpus.")
+
+    _seed_everything(seed)
 
     model_args, data_args, _, generating_args = get_infer_args(
         dict(

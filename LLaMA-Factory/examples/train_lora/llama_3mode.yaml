@@ -1,5 +1,5 @@
 ### model
-model_name_or_path: meta-llama/Llama-3.2-1B-Instruct
+model_name_or_path: meta-llama/Llama-3.2-3B-Instruct
 # trust_remote_code: true
 
 ### method
@@ -23,14 +23,14 @@ preprocessing_num_workers: 16
 dataloader_num_workers: 4
 
 ### output
-output_dir: saves/llama_sft_3mode_3e
+output_dir: saves/llama_3b_sft_3mode
 logging_steps: 5
 save_steps: 40
 plot_loss: true
 overwrite_output_dir: false
 save_only_model: false
 report_to: wandb  # choices: [none, wandb, tensorboard, swanlab, mlflow]
-run_name: llama_sft_3mode_3e
+run_name: llama_3b_sft_3mode
 
 ### accelerator
 flash_attn: fa2
@@ -51,7 +51,7 @@ resume_from_checkpoint: null
 
 ### eval
 eval_dataset: sft_grpo_val_medium
-per_device_eval_batch_size: 4
+per_device_eval_batch_size: 2
 eval_strategy: steps
 eval_steps: 40
 metric_for_best_model: eval_sft_grpo_val_medium_loss

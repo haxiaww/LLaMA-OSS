@@ -2,14 +2,14 @@
 # llamafactory-cli export examples/merge_lora/llama_1mode.yaml
 
 ### model
-model_name_or_path: meta-llama/Llama-3.2-1B-Instruct
-adapter_name_or_path: saves/llama_sft_1mode
+model_name_or_path: meta-llama/Llama-3.2-3B-Instruct
+adapter_name_or_path: saves/llama_3b_sft_1mode/checkpoint-324
 template: llama3
 trust_remote_code: true
 
 ### export
-export_dir: output/llama_sft_1mode
+export_dir: output/llama_3b_sft_1mode_last
 export_size: 5
 export_device: cpu  # choices: [cpu, auto]
 export_legacy_format: false
-export_hub_model_id: KoiiVN/llama_sft_1mode
+export_hub_model_id: KoiiVN/llama_3b_sft_1mode_last
