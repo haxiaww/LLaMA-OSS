@@ -16,21 +16,21 @@ lora_dropout: 0.05
 dataset: sft_medium
 packing: true
 template: qwen
-cutoff_len: 2048  # 1024 + 1024 (max reasoning for medium)
+cutoff_len: 3072  # 1024 + 2048 (max reasoning for high)
 # max_samples: 1000000
 overwrite_cache: true
 preprocessing_num_workers: 16
 dataloader_num_workers: 4
 
 ### output
-output_dir: saves/qwen_3b_sft_1mode
+output_dir: saves/qwen_3b_sft_1mode_final
 logging_steps: 5
-save_steps: 40
+save_steps: 20
 plot_loss: true
 overwrite_output_dir: false
 save_only_model: false
 report_to: wandb  # choices: [none, wandb, tensorboard, swanlab, mlflow]
-run_name: qwen_3b_sft_1mode
+run_name: qwen_3b_sft_1mode_final
 
 ### accelerator
 flash_attn: fa2
@@ -42,18 +42,19 @@ seed: 42
 per_device_train_batch_size: 16  # global batch size = 32
 gradient_accumulation_steps: 2
 learning_rate: 2.0e-4
-num_train_epochs: 3.0
+num_train_epochs: 1.0
 lr_scheduler_type: cosine
 warmup_ratio: 0.1
 bf16: true
 ddp_timeout: 180000000
 resume_from_checkpoint: null
+save_total_limit: 2
 
 ### eval
-eval_dataset: sft_grpo_val_medium
-per_device_eval_batch_size: 4
+eval_dataset: sft_grpo_val_low,sft_grpo_val_medium,sft_grpo_val_high
+per_device_eval_batch_size: 1
 eval_strategy: steps
-eval_steps: 40
+eval_steps: 20
 metric_for_best_model: eval_sft_grpo_val_medium_loss
-load_best_model_at_end: true
+# load_best_model_at_end: true
 eval_on_each_dataset: true

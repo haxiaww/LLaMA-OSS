@@ -1,2 +1,2 @@
-CUDA_VISIBLE_DEVICES=0 llamafactory-cli train examples/train_lora/1_llama3_2_lora_sft_concat_shuffle.yaml
-CUDA_VISIBLE_DEVICES=0 llamafactory-cli train examples/train_lora/2_llama3_2_lora_sft_concat_sorted.yaml
+CUDA_VISIBLE_DEVICES=1 llamafactory-cli train examples/train_lora/llama_3mode.yaml
+CUDA_VISIBLE_DEVICES=1 llamafactory-cli train examples/train_lora/qwen_3mode.yaml
