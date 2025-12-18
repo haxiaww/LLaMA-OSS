@@ -1,0 +1,188 @@
+======================================================================
+CREATE 3 SFT DATASETS + 3 GRPO DATASETS
+======================================================================
+Input:  new_dataset/0_raw
+Output: final
+======================================================================
+
+======================================================================
+Processing Mode: LOW
+======================================================================
+  Reading: gsm8k/gsm8k_train_low.jsonl
+    Filtered 19979 samples (outside [45.0, 78.0] tokens)
+    Added to GRPO dataset
+  Reading: compmath/compmath_train_low.jsonl
+    Filtered 10413 samples (outside [56.0, 121.0] tokens)
+    Added to GRPO dataset
+
+Total records loaded: 18398
+Filtered out for GRPO: 30392
+
+SFT - Before deduplication:
+  compmath  :   6111
+  gsm8k     :  12287
+
+SFT - After deduplication: 7231 samples
+
+SFT - Final counts:
+  compmath  :   2431 ( 33.6%)
+  gsm8k     :   4800 ( 66.4%)
+
+SFT output: final/low_sft.jsonl
+
+----------------------------------------------------------------------
+GRPO for LOW mode
+----------------------------------------------------------------------
+Filtered-out samples: 30392
+Deduplicating by prompt...
+  Before: 30392
+  After:  10054
+  Removed: 20338 duplicates
+
+GRPO - By dataset:
+  compmath  :   3556 ( 35.4%)
+  gsm8k     :   6498 ( 64.6%)
+
+GRPO output: final/grpo_low.jsonl
+
+======================================================================
+Processing Mode: MEDIUM
+======================================================================
+  Reading: gsm8k/gsm8k_train_med.jsonl
+    Filtered 15219 samples (outside [98.0, 194.0] tokens)
+    Added to GRPO dataset
+  Reading: compmath/compmath_train_med.jsonl
+    Filtered 9599 samples (outside [133.0, 292.0] tokens)
+    Added to GRPO dataset
+
+Total records loaded: 18846
+Filtered out for GRPO: 24818
+
+SFT - Before deduplication:
+  compmath  :   6404
+  gsm8k     :  12442
+
+SFT - After deduplication: 7335 samples
+
+SFT - Final counts:
+  compmath  :   2474 ( 33.7%)
+  gsm8k     :   4861 ( 66.3%)
+
+SFT output: final/medium_sft.jsonl
+
+----------------------------------------------------------------------
+GRPO for MEDIUM mode
+----------------------------------------------------------------------
+Filtered-out samples: 24818
+Deduplicating by prompt...
+  Before: 24818
+  After:  9324
+  Removed: 15494 duplicates
+
+GRPO - By dataset:
+  compmath  :   3482 ( 37.3%)
+  gsm8k     :   5842 ( 62.7%)
+
+GRPO output: final/grpo_medium.jsonl
+
+======================================================================
+Processing Mode: HIGH
+======================================================================
+  Reading: gsm8k/gsm8k_train_high.jsonl
+    Filtered 13190 samples (outside [183.0, 405.0] tokens)
+    Added to GRPO dataset
+  Reading: compmath/compmath_train_high.jsonl
+    Filtered 8814 samples (outside [237.0, 534.0] tokens)
+    Added to GRPO dataset
+
+Total records loaded: 18191
+Filtered out for GRPO: 22004
+
+SFT - Before deduplication:
+  compmath  :   6131
+  gsm8k     :  12060
+
+SFT - After deduplication: 7674 samples
+
+SFT - Final counts:
+  compmath  :   2652 ( 34.6%)
+  gsm8k     :   5022 ( 65.4%)
+
+SFT output: final/high_sft.jsonl
+
+----------------------------------------------------------------------
+GRPO for HIGH mode
+----------------------------------------------------------------------
+Filtered-out samples: 22004
+Deduplicating by prompt...
+  Before: 22004
+  After:  9264
+  Removed: 12740 duplicates
+
+GRPO - By dataset:
+  compmath  :   3577 ( 38.6%)
+  gsm8k     :   5687 ( 61.4%)
+
+GRPO output: final/grpo_high.jsonl
+
+
+======================================================================
+SFT SUMMARY
+======================================================================
++--------+----------+---------+---------+------------+
+| Mode   |   Loaded |   Final |   GSM8K |   CompMath |
++========+==========+=========+=========+============+
+| Low    |    18398 |    7231 |    4800 |       2431 |
++--------+----------+---------+---------+------------+
+| Medium |    18846 |    7335 |    4861 |       2474 |
++--------+----------+---------+---------+------------+
+| High   |    18191 |    7674 |    5022 |       2652 |
++--------+----------+---------+---------+------------+
+
+======================================================================
+GRPO SUMMARY
+======================================================================
++--------+-----------------+
+| Mode   |   Total Samples |
++========+=================+
+| Low    |           10054 |
++--------+-----------------+
+| Medium |            9324 |
++--------+-----------------+
+| High   |            9264 |
++--------+-----------------+
+
+Total SFT samples: 22240
+Note: GRPO totals include duplicates (original GRPO in all 3 files)
+
+======================================================================
+OUTPUT FILES
+======================================================================
+
+SFT Datasets:
+  final/low_sft.jsonl (6.2 MB)
+  final/medium_sft.jsonl (8.4 MB)
+  final/high_sft.jsonl (13.4 MB)
+
+GRPO Datasets:
+  final/grpo_low.jsonl (4.9 MB)
+  final/grpo_medium.jsonl (4.4 MB)
+  final/grpo_high.jsonl (4.3 MB)
+
+======================================================================
+TRAINING READY!
+======================================================================
+SFT Datasets (Q25-Q75 range):
+  • low_sft.jsonl    - Concise reasoning
+  • medium_sft.jsonl - Moderate reasoning
+  • high_sft.jsonl   - Detailed reasoning
+
+GRPO Datasets (original + mode-specific filtered):
+  • grpo_low.jsonl    = Original GRPO + Low filtered-out
+  • grpo_medium.jsonl = Original GRPO + Medium filtered-out
+  • grpo_high.jsonl   = Original GRPO + High filtered-out
+
+Note: All 3 GRPO files contain the original GRPO data
+      Each also includes its mode's filtered-out samples
+
+Done! ✓

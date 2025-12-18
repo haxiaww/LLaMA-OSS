@@ -20,7 +20,7 @@ Output:
 - 1 GRPO file (grpo.jsonl)
 
 Usage:
-    python3 create_all_datasets.py --input-dir ./new_dataset/0_raw --output-dir ./final
+    python3 full_pipeline.py --input-dir ./new_dataset/0_raw --output-dir ./final
 """
 
 import argparse
@@ -29,7 +29,7 @@ import re
 import statistics
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Tuple, Set
+from typing import Dict, List, Tuple, Set, Optional
 import sys
 
 try:
@@ -52,6 +52,45 @@ LENGTH_THRESHOLDS = {
         "medium": {"min": 98.0, "max": 194.0},    # Q25: 98.0,  Q75: 194.0
     },
 }
+
+
+def extract_answer(text: str) -> Optional[str]:
+    """Extract answer from text (supports both \\boxed{} and #### formats)."""
+    if not text:
+        return None
+    
+    # Try \\boxed{} format
+    boxed_pattern = r'\\boxed\{([^}]*(?:\{[^}]*\}[^}]*)*)\}'
+    matches = re.findall(boxed_pattern, text)
+    if matches:
+        return matches[-1].strip()
+    
+    # Try #### format
+    hash_pattern = r'####\s*([^\n]+)'
+    match = re.search(hash_pattern, text)
+    if match:
+        return match.group(1).strip()
+    
+    return None
+
+
+def is_correct(record: Dict) -> bool:
+    """Check if prediction matches label."""
+    predict = record.get("predict", "")
+    label = record.get("label", "")
+    
+    if not predict or not label:
+        return False
+    
+    # Extract answers
+    predict_answer = extract_answer(predict)
+    label_answer = extract_answer(label)
+    
+    if not predict_answer or not label_answer:
+        return False
+    
+    # Compare (case-insensitive, strip whitespace)
+    return predict_answer.strip().lower() == label_answer.strip().lower()
 
 
 def clean_prompt(prompt: str) -> str:
@@ -148,6 +187,13 @@ def read_mode_files(input_dir: Path, mode: str, collect_filtered_out: bool = Fal
                     try:
                         record = json.loads(line)
                         
+                        # Check correctness first
+                        if not is_correct(record):
+                            filtered_count += 1
+                            if collect_filtered_out:
+                                filtered_out_records.append(record)
+                            continue
+                        
                         # Filter by length threshold (Q25-Q75 range)
                         reasoning_tokens = record.get("reasoning_tokens", 0.0)
                         in_range = min_threshold <= reasoning_tokens <= max_threshold
@@ -165,7 +211,7 @@ def read_mode_files(input_dir: Path, mode: str, collect_filtered_out: bool = Fal
                             # Keep for SFT
                             kept_records.append(record)
                         else:
-                            # Filtered out - add to GRPO
+                            # Filtered out by length - add to GRPO
                             filtered_count += 1
                             if collect_filtered_out:
                                 filtered_out_records.append(record)
@@ -243,7 +289,6 @@ def format_grpo_record(record: Dict) -> Dict:
     {
       "prompt": "cleaned prompt",
       "label": "ground truth answer",
-
       "dataset": "gsm8k"
     }
     """
@@ -307,6 +352,16 @@ def process_mode(
         
         # Sort by dataset for consistent ordering (GSM8K first, then CompMath)
         deduplicated.sort(key=lambda r: (r.get("dataset", ""), r.get("prompt", "")))
+        
+        # Add mode-specific instruction to each record
+        mode_instructions = {
+            "low": "Respond concisely with minimal reasoning.",
+            "medium": "Solve step-by-step.",
+            "high": "Think deeply, verify, and self-correct."
+        }
+        
+        for record in deduplicated:
+            record["instruction"] = mode_instructions.get(mode, "")
         
         # Write SFT output
         sft_path = output_dir / f"{mode}_sft.jsonl"
@@ -389,7 +444,7 @@ def main():
         "--input-dir",
         type=Path,
         default=Path("./new_dataset/0_raw"),
-        help="Input directory (default: ./0_raw)"
+        help="Input directory (default: ./new_dataset/0_raw)"
     )
     parser.add_argument(
         "--output-dir",
