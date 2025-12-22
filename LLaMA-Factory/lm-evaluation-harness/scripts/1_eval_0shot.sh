@@ -12,14 +12,14 @@ timestamp="$(date +%Y%m%d-%H%M%S)"
 out_json="results/all_tasks/${name}_0shot_2048_4096"
 
 echo "Evaluating model: ${model_path}"
-echo "Task: minerva_math"
+echo "Task: minerva_math500,gsm8k"
 echo "Device: ${device}"
 echo "Output: ${out_json}"
 
 VLLM_ENABLE_V1_MULTIPROCESSING=0 CUDA_VISIBLE_DEVICES="${device}" lm_eval \
   --model vllm \
   --model_args "pretrained=${model_path},tensor_parallel_size=1,dtype=bfloat16,max_model_len=4096,gpu_memory_utilization=0.9,trust_remote_code=True" \
-  --tasks minerva_math \
+  --tasks minerva_math500,gsm8k \
   --batch_size auto \
   --output_path "${out_json}.json" \
   --log_samples \
