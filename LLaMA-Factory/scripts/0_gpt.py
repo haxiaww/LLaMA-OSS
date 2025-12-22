@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Pure vLLM Inference with <think> Tags
-No API server needed - uses vLLM LLM class directly
-"""
 
 import gc
 import json

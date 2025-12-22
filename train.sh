@@ -1,13 +1,16 @@
 #!/bin/bash
-export CUDA_VISIBLE_DEVICES=2
+export CUDA_VISIBLE_DEVICES=1
 #export USE_HF=1
 #consider save_steps grad checkp reduces gpu warmup def is 0
 #    --model_type llama3_2 \ Qwen/Qwen2.5-3B-Instruct meta-llama/Llama-3-2-1B-Instruct meta-llama/Llama-3.2-3B-Instruct
 #    --resume_from_checkpoint /workspace/LLaMA-OSS/outputs/llama_grpo/v5-20251124-110119/checkpoint-700 \
-
+# KoiiVN/final_llama_3b_sft_low
+# KoiiVN/final_llama_3b_sft_medium
+# KoiiVN/final_llama_3b_sft_high
 swift rlhf \
     --rlhf_type grpo \
-    --model meta-llama/Llama-3.2-3B-Instruct \
+    --model KoiiVN/final_llama_3b_sft_low \
+    --model_type llama3_2 \
     --dataset /home/vlai-gpt-oss/LLaMA-OSS/merged_grpo_data.jsonl \
     --per_device_train_batch_size 8 \
     --train_type lora \
