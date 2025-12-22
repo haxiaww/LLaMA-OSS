@@ -1,8 +1,7 @@
 import os
 import re
 from typing import TYPE_CHECKING, Dict, List, Union
-import torch
-import scipy.stats as scipy_stats
+
 import json
 
 if TYPE_CHECKING:
@@ -401,173 +400,75 @@ class SoftOverlong(ORM):
             rewards.append(min(-exceed_len / self.soft_cache_length, 0))
         return rewards
 
-class ModeAdaptiveReward:
+class GRPOAccuracyReward(ORM):
+    """
+    GRPO reward: Accuracy + Repetition penalty.
+    Focused on GSM8K and MATH accuracy with quality bonus for non-repetitive reasoning.
+    """
+    
     def __init__(self):
-        self.mode_params = {
-            'low': {'mean': 117, 'std': 45},
-            'medium': {'mean': 494, 'std': 191},
-            'high': {'mean': 1441, 'std': 275}
-        }
-        self.repetition_alpha = 0.5
-        self.ngram_sizes = [2, 3, 4]
+        # Use existing MS-SWIFT components
+        self.accuracy_orm = MathAccuracy()
+        self.repetition_orm = RepetitionPenalty(repetition_n_grams=5, repetition_max_penalty=-0.5)
         
-        # Component weights (sum to 1.0)
-        self.weights = {
-            'correctness': 0.5,   # 50% - just for being correct
-            'format': 0.2,        # 20% - has <think> tags
-            'length': 0.15,       # 15% - appropriate reasoning length
-            'diversity': 0.15     # 15% - low repetition
-        }
+        # Logging
+        self.step_count = 0
+        self.total_correct = 0
+        self.total_samples = 0
     
-    def extract_answer(self, text: str) -> str:
-        """Extract from \\boxed{} format - handle nested braces"""
-        if not isinstance(text, str):
-            return ""
+    def __call__(self, completions: List[str], **kwargs) -> List[float]:
+        """
+        Compute rewards:
+        - Wrong: 0.0
+        - Correct: 1.0 + repetition_bonus (0.0 to 0.5)
+        """
+        # Get ground truth
+        solution = kwargs.get('label', kwargs.get('solution', kwargs.get('answer', [])))
         
-        # Find \boxed{
-        match = re.search(r'\\boxed\{', text)
-        if not match:
-            return ""
+        # Get accuracy (1.0 or 0.0)
+        accuracy_rewards = self.accuracy_orm(completions, solution, **kwargs)
         
-        start = match.end()
-        text_after = text[start:]
+        # Get repetition penalty (-0.5 to 0.0)
+        repetition_penalties = self.repetition_orm(completions, **kwargs)
         
-        # Count braces to find matching closing brace
-        brace_count = 1
-        end_pos = 0
-        
-        for i, char in enumerate(text_after):
-            if char == '{':
-                brace_count += 1
-            elif char == '}':
-                brace_count -= 1
-                if brace_count == 0:
-                    end_pos = i
-                    break
-        
-        if end_pos > 0:
-            return text_after[:end_pos].strip()
-        
-        return ""
-    
-    def normalize(self, ans: str) -> str:
-        """Normalize answer - MATCH evaluation script exactly"""
-        if not ans:
-            return ""
-        
-        ans = ans.lower().strip()
-        ans = " ".join(ans.split())
-        
-        # Remove LaTeX symbols
-        ans = ans.replace("\\%", "")
-        ans = ans.replace("^\\circ", "")
-        ans = ans.replace("\\$", "")
-        ans = ans.replace("\\pi", "")
-        ans = ans.replace(" ", "")
-        
-        return ans.strip()
-    
-    def extract_thinking(self, text: str) -> str:
-        m = re.search(r'<think>(.*?)</think>', text, re.DOTALL)
-        return m.group(1).strip() if m else ""
-    
-    def compute_repetition_penalty(self, text: str) -> float:
-        """Returns penalty in [0, 1] where higher = more repetitive"""
-        tokens = text.lower().split()
-        if len(tokens) < 2:
-            return 0.0
-        
-        total_penalty = 0.0
-        for n in self.ngram_sizes:
-            if len(tokens) >= n:
-                ngrams = [tuple(tokens[i:i+n]) for i in range(len(tokens)-n+1)]
-                if ngrams:
-                    diversity = len(set(ngrams)) / len(ngrams)
-                    total_penalty += (1.0 - diversity)
-        
-        return total_penalty / len(self.ngram_sizes)
-    
-    def __call__(self, completions: List[str], **kwargs) -> torch.Tensor:
-        prompts = kwargs.get('prompts', [])
-        labels = kwargs.get('labels', kwargs.get('answer', [''] * len(completions)))
-        modes = kwargs.get('mode', ['low'] * len(completions))
-        
-        if isinstance(labels, dict):
-            labels = labels.get('answer', [''] * len(completions))
-        
+        # Combine rewards
         rewards = []
-        for completion, label, mode in zip(completions, labels, modes):
-            reward = self._compute_single_reward(completion, label, mode)
+        correct_count = 0
+        
+        for acc, rep in zip(accuracy_rewards, repetition_penalties):
+            if acc >= 1.0:
+                # Correct: base + quality bonus
+                bonus = -rep  # Convert penalty to bonus (0.0 to 0.5)
+                reward = 1.0 + bonus
+                correct_count += 1
+            else:
+                # Wrong: zero
+                reward = 0.0
+            
             rewards.append(reward)
         
-        return torch.tensor(rewards, dtype=torch.float32)
+        # Update stats
+        self.step_count += 1
+        self.total_correct += correct_count
+        self.total_samples += len(completions)
+        
+        # Log
+        self._log_stats(correct_count, len(completions))
+        
+        return rewards
     
-    def _compute_single_reward(self, gen: str, gt: str, mode: str) -> float:
-        """
-        Reward structure [0, 1]:
-        - Wrong answer: 0.0
-        - Correct answer: 0.5 (base) + up to 0.5 (quality bonuses)
+    def _log_stats(self, correct: int, batch_size: int):
+        """Log accuracy statistics."""
         
-        Components:
-        - Correctness: 0.5 (binary)
-        - Format: 0.2 (has <think> tags)
-        - Length: 0.15 (appropriate reasoning)
-        - Diversity: 0.15 (low repetition)
+        batch_accuracy = correct / batch_size if batch_size > 0 else 0.0
+        cumulative_accuracy = self.total_correct / self.total_samples if self.total_samples > 0 else 0.0
         
-        Max: 1.0
-        """
-        mode = mode.lower()
-        if mode not in ['low', 'medium', 'high']:
-            mode = 'medium'
-        
-        # Extract and normalize
-        pred = self.extract_answer(gen)
-        gt_answer = self.extract_answer(gt)
-        pred_normalized = self.normalize(pred)
-        gt_normalized = self.normalize(gt_answer)
-        
-        # Check correctness
-        is_correct = False
-        if pred_normalized and gt_normalized:
-            is_correct = (pred_normalized == gt_normalized)
-        
-        # If wrong, return 0.0
-        if not is_correct:
-            return 0.0
-        
-        # CORRECT
-        reward = self.weights['correctness']  # 0.5 for being correct
-        
-        # Format bonus (0.0 to 0.2)
-        has_think_tags = '<think>' in gen and '</think>' in gen
-        if has_think_tags:
-            reward += self.weights['format']
-        
-        # Length bonus (0.0 to 0.15)
-        thinking = self.extract_thinking(gen)
-        if thinking:
-            length = len(thinking) // 4
-            mean = self.mode_params[mode]['mean']
-            std = self.mode_params[mode]['std']
-            z = abs(length - mean) / std
-            
-            if z < 1.0:
-                reward += self.weights['length'] * 1.0
-            elif z < 1.5:
-                reward += self.weights['length'] * 0.67
-            elif z < 2.0:
-                reward += self.weights['length'] * 0.33
-        
-        # Diversity bonus (0.0 to 0.15)
-        rep_penalty = self.compute_repetition_penalty(gen)
-        if rep_penalty < 0.2:
-            reward += self.weights['diversity'] * 1.0
-        elif rep_penalty < 0.3:
-            reward += self.weights['diversity'] * 0.67
-        elif rep_penalty < 0.5:
-            reward += self.weights['diversity'] * 0.33
-        
-        return reward
+        print(f"\n{'='*70}")
+        print(f"GRPO Reward - Step {self.step_count}")
+        print(f"{'='*70}")
+        print(f"Batch Accuracy:      {correct}/{batch_size} ({batch_accuracy*100:.1f}%)")
+        print(f"Cumulative Accuracy: {self.total_correct}/{self.total_samples} ({cumulative_accuracy*100:.1f}%)")
+        print(f"{'='*70}\n")
 
 orms = {
     'toolbench': ReactORM,
@@ -578,5 +479,5 @@ orms = {
     'cosine': CosineReward,
     'repetition': RepetitionPenalty,
     'soft_overlong': SoftOverlong,
-    'mode_adaptive' : ModeAdaptiveReward,
+    'grpo_accuracy' : GRPOAccuracyReward,
 }

@@ -3,13 +3,12 @@
 
 ### model
 model_name_or_path: meta-llama/Llama-3.2-3B-Instruct
-adapter_name_or_path: saves/llama_3b_sft_1mode_final/checkpoint-69
+adapter_name_or_path: /home/vlai-gpt-oss/LLaMA-OSS/outputs/llama_base_grpo/v14-20251222-004503/checkpoint-300
 template: llama3
 trust_remote_code: true
 
-### export
-export_dir: output/llama_3b_sft_1mode_final
+export_dir: output/grpo_base
 export_size: 5
 export_device: cpu  # choices: [cpu, auto]
 export_legacy_format: false
-export_hub_model_id: KoiiVN/llama_3b_sft_1mode_final
+#export_hub_model_id: KoiiVN/llama_3b_grpo_final

@@ -6,7 +6,7 @@
 /scripts/sft/9_eval/*
 /results/*
 /lm-evaluation-harness/results/*
-
+/putput/*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

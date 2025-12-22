@@ -1,40 +1,62 @@
 #!/bin/bash
-export CUDA_VISIBLE_DEVICES=0
-export USE_HF=1
+export CUDA_VISIBLE_DEVICES=2
+#export USE_HF=1
 #consider save_steps grad checkp reduces gpu warmup def is 0
-#    --model_type llama3_2 \ Qwen/Qwen2.5-3B-Instruct meta-llama/Llama-3-2-1B-Instruct
+#    --model_type llama3_2 \ Qwen/Qwen2.5-3B-Instruct meta-llama/Llama-3-2-1B-Instruct meta-llama/Llama-3.2-3B-Instruct
 #    --resume_from_checkpoint /workspace/LLaMA-OSS/outputs/llama_grpo/v5-20251124-110119/checkpoint-700 \
 
 swift rlhf \
     --rlhf_type grpo \
-    --model Qwen/Qwen2.5-3B-Instruct \
-    --adapters /workspace/LLaMA-OSS/checkpoint-3592 \
-    --dataset train_grpo.jsonl \
-    --per_device_train_batch_size 1 \
+    --model meta-llama/Llama-3.2-3B-Instruct \
+    --dataset /home/vlai-gpt-oss/LLaMA-OSS/merged_grpo_data.jsonl \
+    --per_device_train_batch_size 8 \
     --train_type lora \
-    --max_steps 1000 \
-    --gradient_accumulation_steps 32 \
-    --learning_rate 5e-7 \
+    --gradient_accumulation_steps 2 \
+    --max_steps 300 \
     --max_length 3072 \
     --loss_type dapo \
     --save_steps 100 \
     --logging_steps 10 \
-    --reward_funcs mode_adaptive \
+    --reward_funcs grpo_accuracy \
     --reward_weights 1 \
-    --output_dir ./outputs/qwen_grpo \
+    --output_dir ./outputs/llama_base_grpo \
     --bf16 true \
     --gradient_checkpointing true \
     --warmup_ratio 0.05 \
-    --save_total_limit 3 \
-    --use_vllm true \
-    --vllm_gpu_memory_utilization 0.6 \
-    --vllm_max_model_len 3072 \
-    --num_sample_generations 4 \
+    --save_total_limit 4 \
+    --num_generations 8 \
     --temperature 1.0 \
-    --top_p 0.95 \
     --use_hf
 echo "Training complete!"
 
+# swift rlhf \
+#     --rlhf_type grpo \
+#     --model meta-llama/Llama-3.2-3B-Instruct \
+#     --dataset /home/vlai-gpt-oss/LLaMA-OSS/compmath_grpo.jsonl,/home/vlai-gpt-oss/LLaMA-OSS/gsm8k_grpo.jsonl \
+#     --per_device_train_batch_size 1 \
+#     --train_type lora \
+#     --max_steps 1000 \
+#     --gradient_accumulation_steps 32 \
+#     --max_length 3072 \
+#     --loss_type dapo \
+#     --save_steps 250 \
+#     --logging_steps 10 \
+#     --reward_funcs grpo_accuracy \
+#     --reward_weights 1 \
+#     --output_dir ./outputs/llama_base_grpo \
+#     --bf16 true \
+#     --gradient_checkpointing true \
+#     --warmup_ratio 0.05 \
+#     --save_total_limit 4 \
+#     --use_vllm true \
+#     --vllm_mode colocate \
+#     --vllm_gpu_memory_utilization 0.6 \
+#     --vllm_max_model_len 3072 \
+#     --num_sample_generations 8 \
+#     --temperature 1.0 \
+#     --top_p 0.95 \
+#     --use_hf
+# echo "Training complete!"
 
 #!/bin/bash
 # export CUDA_VISIBLE_DEVICES=0
