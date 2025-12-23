@@ -12,7 +12,7 @@ swift rlhf \
     --rlhf_type grpo \
     --model KoiiVN/final_llama_3b_sft_medium \
     --model_type llama3_2 \
-    --dataset /home/vlai-gpt-oss/LLaMA-OSS/grpo_med.jsonl \
+    --dataset /home/vlai-gpt-oss/LLaMA-OSS/merged_grpo_data.jsonl \
     --per_device_train_batch_size 8 \
     --train_type lora \
     --gradient_accumulation_steps 2 \
@@ -33,30 +33,30 @@ swift rlhf \
     --use_hf
 echo "Training complete!"
 
-# swift rlhf \
-#     --rlhf_type grpo \
-#     --model KoiiVN/final_llama_3b_sft_high \
-#     --model_type llama3_2 \
-#     --dataset /home/vlai-gpt-oss/LLaMA-OSS/grpo_high.jsonl \
-#     --per_device_train_batch_size 8 \
-#     --train_type lora \
-#     --gradient_accumulation_steps 2 \
-#     --max_steps 300 \
-#     --max_length 3072 \
-#     --loss_type dapo \
-#     --save_steps 100 \
-#     --logging_steps 10 \
-#     --reward_funcs grpo_accuracy \
-#     --reward_weights 1 \
-#     --output_dir ./outputs/llama_high_grpo \
-#     --bf16 true \
-#     --gradient_checkpointing true \
-#     --warmup_ratio 0.05 \
-#     --save_total_limit 4 \
-#     --num_generations 8 \
-#     --temperature 1.0 \
-#     --use_hf
-# echo "Training complete!"
+swift rlhf \
+    --rlhf_type grpo \
+    --model KoiiVN/final_llama_3b_sft_high \
+    --model_type llama3_2 \
+    --dataset /home/vlai-gpt-oss/LLaMA-OSS/merged_grpo_data.jsonl \
+    --per_device_train_batch_size 8 \
+    --train_type lora \
+    --gradient_accumulation_steps 2 \
+    --max_steps 300 \
+    --max_length 3072 \
+    --loss_type dapo \
+    --save_steps 100 \
+    --logging_steps 10 \
+    --reward_funcs grpo_accuracy \
+    --reward_weights 1 \
+    --output_dir ./outputs/llama_high_grpo \
+    --bf16 true \
+    --gradient_checkpointing true \
+    --warmup_ratio 0.05 \
+    --save_total_limit 4 \
+    --num_generations 8 \
+    --temperature 1.0 \
+    --use_hf
+echo "Training complete!"
 
 # swift rlhf \
 #     --rlhf_type grpo \
