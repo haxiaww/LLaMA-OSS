@@ -401,198 +401,81 @@ class SoftOverlong(ORM):
         return rewards
 
 class GRPOAccuracyReward(ORM):
-    def __init__(self, log_file="grpo_debug.log"):
+    """
+    GRPO reward: Accuracy + Repetition penalty.
+    Focused on GSM8K and MATH accuracy with quality bonus for non-repetitive reasoning.
+    """
+    
+    def __init__(self):
+        # Use existing MS-SWIFT components
         self.accuracy_orm = MathAccuracy()
         self.repetition_orm = RepetitionPenalty(repetition_n_grams=5, repetition_max_penalty=-0.5)
+        
+        # Logging
         self.step_count = 0
         self.total_correct = 0
         self.total_samples = 0
-        
-        # Open log file
-        self.log_file = open(log_file, 'w', encoding='utf-8')
-        self.log(f"GRPO Debug Log - Started at {self._timestamp()}\n")
-    
-    def _timestamp(self):
-        from datetime import datetime
-        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    def log(self, message):
-        """Write to both console and file."""
-        print(message)
-        self.log_file.write(message + '\n')
-        self.log_file.flush()  # Ensure it writes immediately
-    
-    def extract_boxed_answer(self, text: str) -> str:
-        import re
-        match = re.search(r'\\boxed\{', text)
-        if not match:
-            return ""
-        
-        start = match.end()
-        brace_count = 1
-        end_pos = start
-        
-        for i, char in enumerate(text[start:], start):
-            if char == '{':
-                brace_count += 1
-            elif char == '}':
-                brace_count -= 1
-                if brace_count == 0:
-                    end_pos = i
-                    break
-        
-        return text[start:end_pos].strip() if end_pos > start else ""
     
     def __call__(self, completions: List[str], **kwargs) -> List[float]:
+        """
+        Compute rewards:
+        - Wrong: 0.0
+        - Correct: 1.0 + repetition_bonus (0.0 to 0.5)
+        """
+        # Get ground truth
         solution = kwargs.get('label', kwargs.get('solution', kwargs.get('answer', [])))
-        
+    
+        if self.step_count % 50 == 0:
+            print("\n" + "="*70)
+            print(f"STEP {self.step_count} - Sample Generations:")
+            for i in range(min(3, len(completions))):
+                print(f"\nGen {i+1}: {completions[i][:300]}...")
+                print(f"Label: {solution[i] if i < len(solution) else 'N/A'}")
+            print("="*70)
+        # Get accuracy (1.0 or 0.0)
         accuracy_rewards = self.accuracy_orm(completions, solution, **kwargs)
+        
+        # Get repetition penalty (-0.5 to 0.0)
         repetition_penalties = self.repetition_orm(completions, **kwargs)
         
-        self.log("\n" + "="*100)
-        self.log(f"STEP {self.step_count + 1} - {self._timestamp()}")
-        self.log("="*100)
-        
+        # Combine rewards
         rewards = []
         correct_count = 0
         
-        for idx, (gen, acc, rep, label) in enumerate(
-            zip(completions, accuracy_rewards, repetition_penalties, solution), 1
-        ):
-            is_correct = acc >= 1.0
-            
-            if is_correct:
-                bonus = -rep
+        for acc, rep in zip(accuracy_rewards, repetition_penalties):
+            if acc >= 1.0:
+                # Correct: base + quality bonus
+                bonus = -rep  # Convert penalty to bonus (0.0 to 0.5)
                 reward = 1.0 + bonus
                 correct_count += 1
             else:
+                # Wrong: zero
                 reward = 0.0
-            
-            # Log everything
-            self.log(f"\n{'='*100}")
-            self.log(f"Sample {idx}/{len(completions)} - {'CORRECT ✓' if is_correct else 'WRONG ✗'}")
-            self.log(f"{'='*100}")
-            
-            self.log(f"\n🔹 FULL GENERATION:")
-            self.log(gen)  # FULL TEXT - NO TRUNCATION
-            
-            self.log(f"\n🔹 GROUND TRUTH:")
-            self.log(label)  # FULL LABEL
-            
-            gen_ans = self.extract_boxed_answer(gen)
-            label_ans = self.extract_boxed_answer(label)
-            
-            self.log(f"\n🔹 EXTRACTED ANSWERS:")
-            self.log(f"   Generated: '{gen_ans}'")
-            self.log(f"   Label:     '{label_ans}'")
-            self.log(f"   Match:     {gen_ans == label_ans}")
-            
-            self.log(f"\n🔹 METRICS:")
-            self.log(f"   Accuracy:   {acc}")
-            self.log(f"   Repetition: {rep:.3f}")
-            self.log(f"   REWARD:     {reward:.3f}")
-            
-            self.log(f"\n{'─'*100}\n")
             
             rewards.append(reward)
         
+        # Update stats
         self.step_count += 1
         self.total_correct += correct_count
         self.total_samples += len(completions)
         
-        batch_acc = correct_count / len(completions) * 100
-        cum_acc = self.total_correct / self.total_samples * 100
-        
-        self.log(f"\n{'='*100}")
-        self.log(f"BATCH SUMMARY:")
-        self.log(f"  Correct: {correct_count}/{len(completions)} ({batch_acc:.1f}%)")
-        self.log(f"  Cumulative: {self.total_correct}/{self.total_samples} ({cum_acc:.1f}%)")
-        self.log(f"  Avg Reward: {sum(rewards)/len(rewards):.3f}")
-        self.log(f"{'='*100}\n\n")
+        # Log
+        self._log_stats(correct_count, len(completions))
         
         return rewards
     
-    def __del__(self):
-        """Close log file when done."""
-        if hasattr(self, 'log_file'):
-            self.log_file.close()
-
-# class GRPOAccuracyReward(ORM):
-#     """
-#     GRPO reward: Accuracy + Repetition penalty.
-#     Focused on GSM8K and MATH accuracy with quality bonus for non-repetitive reasoning.
-#     """
-    
-#     def __init__(self):
-#         # Use existing MS-SWIFT components
-#         self.accuracy_orm = MathAccuracy()
-#         self.repetition_orm = RepetitionPenalty(repetition_n_grams=5, repetition_max_penalty=-0.5)
+    def _log_stats(self, correct: int, batch_size: int):
+        """Log accuracy statistics."""
         
-#         # Logging
-#         self.step_count = 0
-#         self.total_correct = 0
-#         self.total_samples = 0
-    
-#     def __call__(self, completions: List[str], **kwargs) -> List[float]:
-#         """
-#         Compute rewards:
-#         - Wrong: 0.0
-#         - Correct: 1.0 + repetition_bonus (0.0 to 0.5)
-#         """
-#         # Get ground truth
-#         solution = kwargs.get('label', kwargs.get('solution', kwargs.get('answer', [])))
-    
-#         if self.step_count % 50 == 0:
-#             print("\n" + "="*70)
-#             print(f"STEP {self.step_count} - Sample Generations:")
-#             for i in range(min(3, len(completions))):
-#                 print(f"\nGen {i+1}: {completions[i][:300]}...")
-#                 print(f"Label: {solution[i] if i < len(solution) else 'N/A'}")
-#             print("="*70)
-#         # Get accuracy (1.0 or 0.0)
-#         accuracy_rewards = self.accuracy_orm(completions, solution, **kwargs)
+        batch_accuracy = correct / batch_size if batch_size > 0 else 0.0
+        cumulative_accuracy = self.total_correct / self.total_samples if self.total_samples > 0 else 0.0
         
-#         # Get repetition penalty (-0.5 to 0.0)
-#         repetition_penalties = self.repetition_orm(completions, **kwargs)
-        
-#         # Combine rewards
-#         rewards = []
-#         correct_count = 0
-        
-#         for acc, rep in zip(accuracy_rewards, repetition_penalties):
-#             if acc >= 1.0:
-#                 # Correct: base + quality bonus
-#                 bonus = -rep  # Convert penalty to bonus (0.0 to 0.5)
-#                 reward = 1.0 + bonus
-#                 correct_count += 1
-#             else:
-#                 # Wrong: zero
-#                 reward = 0.0
-            
-#             rewards.append(reward)
-        
-#         # Update stats
-#         self.step_count += 1
-#         self.total_correct += correct_count
-#         self.total_samples += len(completions)
-        
-#         # Log
-#         self._log_stats(correct_count, len(completions))
-        
-#         return rewards
-    
-#     def _log_stats(self, correct: int, batch_size: int):
-#         """Log accuracy statistics."""
-        
-#         batch_accuracy = correct / batch_size if batch_size > 0 else 0.0
-#         cumulative_accuracy = self.total_correct / self.total_samples if self.total_samples > 0 else 0.0
-        
-#         print(f"\n{'='*70}")
-#         print(f"GRPO Reward - Step {self.step_count}")
-#         print(f"{'='*70}")
-#         print(f"Batch Accuracy:      {correct}/{batch_size} ({batch_accuracy*100:.1f}%)")
-#         print(f"Cumulative Accuracy: {self.total_correct}/{self.total_samples} ({cumulative_accuracy*100:.1f}%)")
-#         print(f"{'='*70}\n")
+        print(f"\n{'='*70}")
+        print(f"GRPO Reward - Step {self.step_count}")
+        print(f"{'='*70}")
+        print(f"Batch Accuracy:      {correct}/{batch_size} ({batch_accuracy*100:.1f}%)")
+        print(f"Cumulative Accuracy: {self.total_correct}/{self.total_samples} ({cumulative_accuracy*100:.1f}%)")
+        print(f"{'='*70}\n")
 
 orms = {
     'toolbench': ReactORM,
