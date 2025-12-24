@@ -1,5 +1,5 @@
 #!/bin/bash
-export CUDA_VISIBLE_DEVICES=1
+export CUDA_VISIBLE_DEVICES=2
 #export USE_HF=1
 #consider save_steps grad checkp reduces gpu warmup def is 0
 #    --model_type llama3_2 \ Qwen/Qwen2.5-3B-Instruct meta-llama/Llama-3-2-1B-Instruct meta-llama/Llama-3.2-3B-Instruct
