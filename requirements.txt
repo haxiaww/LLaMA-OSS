@@ -1,19 +1,16 @@
-ssh-keygen -t ed25519 -C "devkoi2k3@gmail.com"
+# Install LLaMA-Factory and MS-SWIFT from submodules
+# Run these commands first:
+#   cd LLaMA-Factory && pip install -e . && cd ..
+#   cd ms-swift && pip install -e . && cd ..
 
-cat ~/.ssh/id_ed25519.pub
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
 
-ssh -T git@github.com
-
-pip install uv
-
-uv pip install -e ".[torch,metrics]" --no-build-isolation
-
-uv pip install vllm
-
-hf auth login
-
-pip install liger-kernel
-
-pip install wandb
-
-pip install flash-attn --no-build-isolation
+# Utilities
+tqdm>=4.66.0
+jupyter>=1.0.0
+notebook>=7.0.0
+liger-kernels>=0.1.0
+wandb>=0.15.0
+flash-attn --no-build-isolation
