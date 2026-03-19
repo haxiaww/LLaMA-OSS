@@ -1,6 +1,6 @@
 # Usage Guide
 
-Repo root = `LLaMA-OSS`. There is no top-level `src` Python package; workflows use **LLaMA-Factory scripts**, **MS-SWIFT CLI**, and optional **notebooks**.
+Repo root = `LLaMA-OSS`. There is no top-level `src` Python package; workflows use **LLaMA-Factory scripts**, **MS-SWIFT CLI**, and **`scripts/`** (eval, train, `convert_data.sh`).
 
 ## 1. Teacher inference (multi-mode CoT, vLLM)
 
@@ -51,7 +51,7 @@ Output lines include `prompt`, `response`, `mode`, `label`, `dataset`, `instruct
 
 ## 2. GRPO dataset conversion
 
-`convert_data.ipynb` shows the pattern: read curated JSONL (with `prompt` / `label` or `response`), extract `\\boxed{...}` for **`label`**, write GRPO lines:
+`scripts/convert_data.sh` (subcommands: `repo-root`, `grpo-high`, `compmath`, `merge`, `combined-grpo`, `analyze-thinking`) implements the same JSONL steps: read curated JSONL (with `prompt` / `label` or `response`), extract `\\boxed{...}` for **`label`**, write GRPO lines. Example: `bash scripts/convert_data.sh grpo-high`.
 
 ```json
 {"query": "<same as prompt>", "label": "\\boxed{...}"}
@@ -61,19 +61,19 @@ Output lines include `prompt`, `response`, `mode`, `label`, `dataset`, `instruct
 
 ## 3. GRPO training (MS-SWIFT)
 
-Example pattern: `train.sh` — **`swift rlhf`** with `--rlhf_type grpo`, `--dataset` pointing at your JSONL, LoRA on a student checkpoint.
+Example pattern: `scripts/train.sh` — **`swift rlhf`** with `--rlhf_type grpo`, `--dataset` pointing at your JSONL, LoRA on a student checkpoint.
 
 Before running:
 
-1. Edit **`train.sh`**: `CUDA_VISIBLE_DEVICES`, `--model`, `--dataset` path, `--output_dir`.
+1. Edit **`scripts/train.sh`** or set env: `CUDA_VISIBLE_DEVICES`, `MODEL`, `DATASET`, `OUTPUT_DIR`.
 2. Run from repo root (with `swift` on `PATH` after `pip install -e ms-swift`):
 
 ```bash
-bash train.sh
+bash scripts/train.sh
 ```
 
 See [CONFIG.md](./CONFIG.md) for knobs.
 
 ## 4. Evaluation
 
-See [EVALUATION.md](./EVALUATION.md) and root `eval.sh` (**lm-eval** + vLLM backend).
+See [EVALUATION.md](./EVALUATION.md) and `scripts/eval.sh` (**lm-eval** + vLLM backend).

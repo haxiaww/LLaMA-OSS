@@ -4,14 +4,14 @@
 
 | Variable | Purpose |
 |----------|---------|
-| `CUDA_VISIBLE_DEVICES` | GPU selection (`train.sh`, `eval.sh`) |
+| `CUDA_VISIBLE_DEVICES` | GPU selection (`scripts/train.sh`, `scripts/eval.sh`) |
 | `HF_TOKEN` / `HUGGING_FACE_HUB_TOKEN` | Private / gated models on Hugging Face |
 | `TOKENIZERS_PARALLELISM=false` | Avoid tokenizer warnings under multiprocessing |
-| `VLLM_ENABLE_V1_MULTIPROCESSING=0` | Used in `eval.sh` for stable lm-eval + vLLM |
+| `VLLM_ENABLE_V1_MULTIPROCESSING=0` | Used in `scripts/eval.sh` for stable lm-eval + vLLM |
 
 Optional:
 
-- `USE_HF` — referenced in commented `train.sh` blocks; follow MS-SWIFT docs for your install.
+- `USE_HF` — pass through MS-SWIFT / `swift rlhf` as needed; see MS-SWIFT docs.
 
 ## Teacher inference (`LLaMA-Factory/scripts/0_gpt.py`)
 
@@ -25,9 +25,9 @@ All settings are **CLI arguments** to `infer_vllm_pure` (Fire). There is no sepa
 
 Working directory: run from `LLaMA-Factory/scripts` or pass **absolute** `--dataset` / `--save_name` so relative paths resolve correctly.
 
-## GRPO training (`train.sh` → `swift rlhf`)
+## GRPO training (`scripts/train.sh` → `swift rlhf`)
 
-Edit the active block in `train.sh`:
+Edit defaults in `scripts/train.sh` or export `MODEL`, `DATASET`, `OUTPUT_DIR` before running:
 
 | CLI flag | Typical meaning here |
 |----------|----------------------|
@@ -42,11 +42,11 @@ Edit the active block in `train.sh`:
 | `--output_dir` | Checkpoints |
 | `--num_generations` / sampling flags | On-policy rollouts (see MS-SWIFT GRPO docs) |
 
-Paths inside `train.sh` are machine-specific (`/home/...`); replace with your repo paths.
+`DATASET` / `OUTPUT_DIR` default under repo root; override with absolute paths if your data lives elsewhere.
 
 ## Datasets layout
 
-- Alpaca-style / train JSONL often lives under **`LLaMA-Factory/data/`** (see filenames in `convert_data.ipynb`).
+- Alpaca-style / train JSONL often lives under **`LLaMA-Factory/data/`** (see defaults in `scripts/convert_data.sh`).
 - Repo root may hold merged GRPO files (e.g. `merged_grpo_data.jsonl`, `train_grpo.jsonl`) — **field names differ** by pipeline stage; see [USAGE.md](./USAGE.md).
 
 ## Dependencies

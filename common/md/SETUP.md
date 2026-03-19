@@ -98,9 +98,9 @@ python 0_gpt.py \
 
 ### Permission Issues
 ```bash
-# Fix file permissions
-chmod +x scripts/*.py
-chmod +x *.sh
+# Fix file permissions (if needed)
+chmod +x scripts/*.sh
+chmod +x LLaMA-Factory/scripts/*.py
 
 # Fix directory permissions
 chmod -R 755 LLaMA-Factory/
