@@ -135,7 +135,7 @@ This guide provides instructions on how to run the evaluation scripts, interpret
 
 ### Data (DVC)
 
-Large datasets (`LLaMA-Factory/data/`, `merged_grpo_data.jsonl`, `train_grpo.jsonl`) and training **`outputs/`** are stored with [DVC](https://dvc.org), not as normal Git files. After cloning, install dependencies and run `python -m dvc pull` once a [remote](https://dvc.org/doc/command-reference/remote) is configured.
+Large datasets (`LLaMA-Factory/data/`, `merged_grpo_data.jsonl`, `train_grpo.jsonl`) and training **`outputs/`** are stored with [DVC](https://dvc.org), not as normal Git files. Git tracks the sidecars `LLaMA-Factory/data.dvc`, `outputs.dvc`, `merged_grpo_data.dvc`, and `train_grpo.dvc`. After cloning, install dependencies and run `python -m dvc pull` once a [remote](https://dvc.org/doc/command-reference/remote) is configured.
 
 **➡️ [DVC guide for this repo](./common/md/DVC.md)** (remotes, `push` / `pull`, updating artifacts)
 
@@ -155,9 +155,11 @@ python 0_gpt.py \
   --instruction "Respond concisely with minimal reasoning."
 ```
 
-**GRPO training:** edit paths in `train.sh`, then `bash train.sh` (uses `swift rlhf`).
+**GRPO JSONL prep:** `bash scripts/convert_data.sh <subcommand>` — see [USAGE.md](./common/md/USAGE.md).
 
-**Evaluation:** `bash eval.sh <gpu> <model_path> <name>` — see [EVALUATION.md](./common/md/EVALUATION.md).
+**GRPO training:** edit env / defaults in `scripts/train.sh`, then `bash scripts/train.sh` (uses `swift rlhf`).
+
+**Evaluation:** `bash scripts/eval.sh <gpu> <model_path> <name>` — see [EVALUATION.md](./common/md/EVALUATION.md).
 
 ## Citation
 

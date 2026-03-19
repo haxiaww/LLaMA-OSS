@@ -1,6 +1,6 @@
 # Evaluation Guide
 
-Benchmarking uses **EleutherAI lm-evaluation-harness** with the **vLLM** model backend. The repo provides `eval.sh` at the **repository root**.
+Benchmarking uses **EleutherAI lm-evaluation-harness** with the **vLLM** model backend. The repo provides `scripts/eval.sh` (run from repo root or any cwd — it `cd`s to the repo).
 
 ## Prerequisites
 
@@ -8,10 +8,10 @@ Benchmarking uses **EleutherAI lm-evaluation-harness** with the **vLLM** model b
 - GPU with enough memory for `--model_args` below (bf16, `max_model_len=4096`).
 - Your **merged / LoRA / full** checkpoint path passed as the second argument.
 
-## `eval.sh` arguments
+## `scripts/eval.sh` arguments
 
 ```bash
-./eval.sh [CUDA_DEVICES] [MODEL_PATH] [NAME_TAG]
+bash scripts/eval.sh [CUDA_DEVICES] [MODEL_PATH] [NAME_TAG]
 ```
 
 | Arg | Default | Meaning |
@@ -23,7 +23,7 @@ Benchmarking uses **EleutherAI lm-evaluation-harness** with the **vLLM** model b
 Example:
 
 ```bash
-bash eval.sh 0 /path/to/merged_or_adapter_checkpoint my_run
+bash scripts/eval.sh 0 /path/to/merged_or_adapter_checkpoint my_run
 ```
 
 Outputs go under `results/all_tasks/` (see script for exact filename pattern).
@@ -40,4 +40,4 @@ Outputs go under `results/all_tasks/` (see script for exact filename pattern).
 
 - Change `--tasks` for other lm-eval task names.
 - If you use **LoRA adapters**, lm-eval vLLM integration may need a **merged** full weights directory — check current harness docs for `pretrained` + adapter options.
-- For multi-GPU tensor parallel, adjust `tensor_parallel_size` inside `eval.sh` to match visible devices.
+- For multi-GPU tensor parallel, adjust `tensor_parallel_size` inside `scripts/eval.sh` to match visible devices.
