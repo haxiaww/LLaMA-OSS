@@ -132,57 +132,25 @@ This guide provides instructions on how to run the evaluation scripts, interpret
 
 **➡️ [View Full Evaluation Guide](./common/md/EVALUATION.md)**
 
-## Programmatic Usage
+## Programmatic / CLI Workflow
 
-The modular design of the framework allows for easy integration into your own Python projects. You can import and use the components directly for custom workflows.
+Use the **LLaMA-Factory** script and **MS-SWIFT** CLI; details are in [USAGE.md](./common/md/USAGE.md) and [CONFIG.md](./common/md/CONFIG.md).
 
-```python
-from src.curation import CurationPipeline, AnswerVerifier, LengthFilter
-from src.generator import GPTOSSGenerator
+**Teacher generation (vLLM, JSONL in/out):** run `LLaMA-Factory/scripts/0_gpt.py` with [Fire](https://github.com/google/python-fire) — kwargs map 1:1 to CLI flags. Input lines need at least `prompt` and `label` (or `response`, which is copied to `label`).
 
-# 1. Setup the GPT-OSS generator for multi-mode CoT
-generator = GPTOSSGenerator(
-    model_name='gpt-4o',
-    modes=['low', 'medium', 'high']
-)
-
-# 2. Generate CoT traces from your math dataset
-math_problems = [
-    {"question": "What is 15 + 27?", "answer": "42"},
-    {"question": "Janet's ducks lay 16 eggs per day...", "answer": "18"}
-]
-
-cot_data = generator.generate_multi_mode_cot(
-    problems=math_problems,
-    output_path='raw_cot_data.jsonl'
-)
-
-# 3. Apply the two-step curation pipeline
-curation = CurationPipeline(
-    answer_verifier=AnswerVerifier(),
-    length_filter=LengthFilter(percentile_range=(25, 75))
-)
-
-# Step 1: Answer verification
-verified_data = curation.verify_answers(cot_data)
-
-# Step 2: Length-based filtering with median selection
-curated_data = curation.filter_by_length(verified_data, select_median=True)
-
-# 4. Save mode-specific curated datasets
-curation.save_by_mode(
-    curated_data,
-    output_dir='outputs',
-    filenames={
-        'low': 'cot_low.jsonl',
-        'medium': 'cot_med.jsonl',
-        'high': 'cot_high.jsonl'
-    }
-)
-
-print(f"Curated {len(curated_data)} high-quality reasoning traces")
-print(f"Files saved: cot_low.jsonl, cot_med.jsonl, cot_high.jsonl")
+```bash
+cd LLaMA-Factory/scripts
+python 0_gpt.py \
+  --model_name_or_path <gpt-oss-checkpoint> \
+  --dataset /absolute/path/to/prompts.jsonl \
+  --save_name /absolute/path/to/out_low.jsonl \
+  --mode low \
+  --instruction "Respond concisely with minimal reasoning."
 ```
+
+**GRPO training:** edit paths in `train.sh`, then `bash train.sh` (uses `swift rlhf`).
+
+**Evaluation:** `bash eval.sh <gpu> <model_path> <name>` — see [EVALUATION.md](./common/md/EVALUATION.md).
 
 ## Citation
 
