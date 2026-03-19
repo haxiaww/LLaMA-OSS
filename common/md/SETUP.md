@@ -52,6 +52,16 @@ cd ms-swift && pip install -e . && cd ..
 pip install -r requirements.txt
 ```
 
+### 4. Pull large data (DVC)
+
+Datasets and `outputs/` are versioned with DVC. After `pip install -r requirements.txt`, configure a [DVC remote](./DVC.md) (or use an existing team remote), then:
+
+```bash
+python -m dvc pull
+```
+
+See **[DVC.md](./DVC.md)** for `remote add`, `push`, and which paths are tracked.
+
 ## Environment Setup
 
 ### Environment Variables
@@ -104,7 +114,8 @@ After successful setup:
 1. **Read the [Usage Guide](USAGE.md)** for running inference and evaluation
 2. **Check [Configuration Guide](CONFIG.md)** for customizing models and settings
 3. **Review [Evaluation Guide](EVALUATION.md)** for benchmarking instructions
-4. **Run sample experiments** to verify everything works correctly
+4. **If using DVC-tracked data**, follow [DVC.md](./DVC.md) (`pull` / `push`)
+5. **Run sample experiments** to verify everything works correctly
 
 ## Support
 

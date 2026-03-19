@@ -41,6 +41,7 @@ This framework is built with a focus on modularity, performance, and ease of use
 - [Framework Guides](#framework-guides)
   - [Configuration](#configuration)
   - [Evaluation](#evaluation)
+  - [Data (DVC)](#data-dvc)
 - [Programmatic Usage](#programmatic-usage)
 - [Citation](#citation)
 - [Acknowledgements](#acknowledgements)
@@ -131,6 +132,12 @@ The configuration system is designed for flexibility. You can easily modify data
 This guide provides instructions on how to run the evaluation scripts, interpret the results, and perform comparative analysis between different models and configurations.
 
 **➡️ [View Full Evaluation Guide](./common/md/EVALUATION.md)**
+
+### Data (DVC)
+
+Large datasets (`LLaMA-Factory/data/`, `merged_grpo_data.jsonl`, `train_grpo.jsonl`) and training **`outputs/`** are stored with [DVC](https://dvc.org), not as normal Git files. After cloning, install dependencies and run `python -m dvc pull` once a [remote](https://dvc.org/doc/command-reference/remote) is configured.
+
+**➡️ [DVC guide for this repo](./common/md/DVC.md)** (remotes, `push` / `pull`, updating artifacts)
 
 ## Programmatic / CLI Workflow
 

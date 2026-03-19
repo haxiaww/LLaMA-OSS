@@ -13,4 +13,5 @@ jupyter>=1.0.0
 notebook>=7.0.0
 liger-kernels>=0.1.0
 wandb>=0.15.0
+dvc>=3.50.0
 flash-attn --no-build-isolation
