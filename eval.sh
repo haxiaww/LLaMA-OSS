@@ -7,7 +7,7 @@ model_path="${2:-}"
 name="${3:-}"
 
 # Output paths
-mkdir -p results
+mkdir -p results/all_tasks
 timestamp="$(date +%Y%m%d-%H%M%S)"
 out_json="results/all_tasks/${name}_0shot_2048_4096"
 
@@ -27,4 +27,4 @@ VLLM_ENABLE_V1_MULTIPROCESSING=0 CUDA_VISIBLE_DEVICES="${device}" lm_eval \
   --apply_chat_template \
   --gen_kwargs "max_gen_toks=2048,temperature=0,do_sample=False" \
   --seed 1234 \
-  --num_fewshot 0 \
+  --num_fewshot 0

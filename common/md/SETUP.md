@@ -26,7 +26,7 @@
 ### 1. Clone Repository
 ```bash
 git clone https://github.com/Koii2k3/LLaMA-OSS.git
-cd LlaMA-OSS
+cd LLaMA-OSS
 ```
 
 ### 2. Create Virtual Environment
@@ -57,7 +57,6 @@ pip install -r requirements.txt
 ### Environment Variables
 ```bash
 # Add to ~/.bashrc or ~/.zshrc
-export PYTHONPATH="${PYTHONPATH}:${PWD}/src"
 export CUDA_VISIBLE_DEVICES="0"  # Specify GPU IDs
 export TOKENIZERS_PARALLELISM=false
 
@@ -94,7 +93,7 @@ chmod +x scripts/*.py
 chmod +x *.sh
 
 # Fix directory permissions
-chmod -R 755 LlaMA-Factory/
+chmod -R 755 LLaMA-Factory/
 chmod -R 755 ms-swift/
 ```
 
