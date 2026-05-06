@@ -10,8 +10,8 @@
   <a href="https://github.com/Koii2k3/LLaMA-OSS/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
   </a>
-  <a href="">
-    <img src="https://img.shields.io/badge/Paper-arXiv-red" alt="Paper">
+  <a href="common/img/gpt_oss.pdf">
+    <img src="https://img.shields.io/badge/Paper-PDF-red" alt="Paper (GPT-OSS PDF)">
   </a>
   <a href="">
     <img src="https://img.shields.io/badge/Project-Page-blue" alt="Project Page">
@@ -155,11 +155,11 @@ python 0_gpt.py \
   --instruction "Respond concisely with minimal reasoning."
 ```
 
-**GRPO JSONL prep:** `bash scripts/convert_data.sh <subcommand>` — see [USAGE.md](./common/md/USAGE.md).
+**GRPO JSONL prep:** `python scripts/convert_data.py <subcommand>` or `bash scripts/convert_data.sh …` — notebook: [`scripts/convert_data.ipynb`](./scripts/convert_data.ipynb). Details in [USAGE.md](./common/md/USAGE.md).
 
-**GRPO training:** edit env / defaults in `scripts/train.sh`, then `bash scripts/train.sh` (uses `swift rlhf`).
+**GRPO training:** set `CUDA_VISIBLE_DEVICES` / `MODEL` / `DATASET` / `OUTPUT_DIR` if needed, then `bash scripts/train.sh` (uses `swift rlhf`).
 
-**Evaluation:** `bash scripts/eval.sh <gpu> <model_path> <name>` — see [EVALUATION.md](./common/md/EVALUATION.md).
+**Evaluation:** `bash scripts/eval.sh <gpu> <model_path> [name]` (default name `eval`) — [EVALUATION.md](./common/md/EVALUATION.md).
 
 ## Citation
 

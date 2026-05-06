@@ -51,7 +51,17 @@ Output lines include `prompt`, `response`, `mode`, `label`, `dataset`, `instruct
 
 ## 2. GRPO dataset conversion
 
-`scripts/convert_data.sh` (subcommands: `repo-root`, `grpo-high`, `compmath`, `merge`, `combined-grpo`, `analyze-thinking`) implements the same JSONL steps: read curated JSONL (with `prompt` / `label` or `response`), extract `\\boxed{...}` for **`label`**, write GRPO lines. Example: `bash scripts/convert_data.sh grpo-high`.
+Implementation: **`scripts/convert_data.py`** (use directly or via **`scripts/convert_data.sh`** wrapper). Interactive: **`scripts/convert_data.ipynb`** (runs the same CLI with `subprocess`).
+
+Subcommands: `repo-root`, `grpo-high`, `compmath`, `merge`, `combined-grpo`, `analyze-thinking` — read curated JSONL (`prompt` / `label` or `response`), extract `\\boxed{...}` where applicable, write GRPO-style lines.
+
+```bash
+python scripts/convert_data.py grpo-high
+# or
+bash scripts/convert_data.sh grpo-high
+```
+
+Optional: `export REPO_ROOT=/path/to/LLaMA-OSS` if defaults should not be inferred from the script location.
 
 ```json
 {"query": "<same as prompt>", "label": "\\boxed{...}"}
